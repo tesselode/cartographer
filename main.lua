@@ -9,7 +9,7 @@ local testMap = cartographer.load {
 }
 
 function love.draw()
-	for layer in testMap:getTileLayers() do
-		testMap:drawTileLayer(layer)
-	end
+	testMap:drawTileLayer 'Back tiles'
+	testMap:drawTileLayer 'Main tiles'
+	testMap:drawTileLayer 'Front tiles'
 end

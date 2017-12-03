@@ -28,12 +28,13 @@ function Map:_getTileset(gid)
 end
 
 function Map:_getTile(gid)
-	local tileset = self:_getTileset(gid)
-	local x, y = getCoordinates(gid - tileset.firstgid + 1,
-		tileset._image:getWidth() / tileset.tilewidth)
-	return love.graphics.newQuad(x * tileset.tilewidth,
-		y * tileset.tileheight, tileset.tilewidth, tileset.tileheight,
-		tileset._image:getWidth(), tileset._image:getHeight())
+	local ts = self:_getTileset(gid)
+	local x, y = getCoordinates(gid - ts.firstgid + 1,
+		ts._image:getWidth() / ts.tilewidth)
+	local q = love.graphics.newQuad(x * ts.tilewidth, y * ts.tileheight,
+		ts.tilewidth, ts.tileheight,
+		ts._image:getWidth(), ts._image:getHeight())
+	return ts._image, q
 end
 
 function Map:_renderTileLayer(layer)
@@ -44,8 +45,8 @@ function Map:_renderTileLayer(layer)
 		for n, gid in ipairs(layer.data) do
 			if gid ~= 0 then
 				local x, y = getCoordinates(n, layer.width)
-				local tileset = self:_getTileset(gid)
-				love.graphics.draw(tileset._image, self:_getTile(gid),
+				local image, q = self:_getTile(gid)
+				love.graphics.draw(image, q,
 					x * self.tilewidth, y * self.tileheight)
 			end
 		end
@@ -54,43 +55,17 @@ end
 
 function Map:getLayer(name)
 	for _, layer in ipairs(self.layers) do
-		if layer.name == name then
-			return layer
-		end
+		if layer.name == name then return layer end
 	end
 	return false
 end
 
-function Map:getTileLayers()
-	local i = 0
-	return function()
-		while i < #self.layers do
-			i = i + 1
-			if self.layers[i].type == 'tilelayer' then
-				return self.layers[i]
-			end
-		end
-	end
-end
-
-function Map:getObjectLayers()
-	local i = 0
-	return function()
-		while i < #self.layers do
-			i = i + 1
-			if self.layers[i].type == 'objectgroup' then
-				return self.layers[i]
-			end
-		end
-	end
-end
-
-function Map:drawTileLayer(layer, x, y)
+function Map:drawTileLayer(layer, ...)
 	layer = type(layer) == 'string' and self:getLayer(layer) or layer
 	assert(layer, 'layer does not exist')
 	assert(layer.type == 'tilelayer', 'not a tile layer')
 	love.graphics.setColor(255, 255, 255)
-	love.graphics.draw(layer._canvas, x, y)
+	love.graphics.draw(layer._canvas, ...)
 end
 
 function cartographer.load(options)
