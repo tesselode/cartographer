@@ -8,6 +8,10 @@ local testMap = cartographer.load {
 	},
 }
 
+for object in testMap:getObjects 'Geometry' do
+	print(object)
+end
+
 function love.draw()
 	testMap:drawTileLayer 'Back tiles'
 	testMap:drawTileLayer 'Main tiles'

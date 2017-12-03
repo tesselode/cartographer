@@ -60,8 +60,18 @@ function Map:getLayer(name)
 	return false
 end
 
-function Map:drawTileLayer(layer, ...)
-	layer = type(layer) == 'string' and self:getLayer(layer) or layer
+function Map:getObjects(name)
+	local layer = self:getLayer(name)
+	assert(layer, 'layer does not exist')
+	local i = 0
+	return function()
+		i = i + 1
+		return layer.objects[i]
+	end
+end
+
+function Map:drawTileLayer(name, ...)
+	local layer = self:getLayer(name)
 	assert(layer, 'layer does not exist')
 	assert(layer.type == 'tilelayer', 'not a tile layer')
 	love.graphics.setColor(255, 255, 255)
