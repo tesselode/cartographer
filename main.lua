@@ -2,12 +2,12 @@ local cartographer = require 'cartographer'
 
 local testMap = cartographer.load 'test.lua'
 
-for object in testMap:getObjects 'Geometry' do
+for _, object in ipairs(testMap.layers['Geometry'].objects) do
 	print(object)
 end
 
 function love.draw()
-	testMap:drawTileLayer 'Back tiles'
-	testMap:drawTileLayer 'Main tiles'
-	testMap:drawTileLayer 'Front tiles'
+	testMap.layers['Back tiles']:draw()
+	testMap.layers['Main tiles']:draw()
+	testMap.layers['Front tiles']:draw()
 end

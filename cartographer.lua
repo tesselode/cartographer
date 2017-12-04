@@ -21,6 +21,15 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
+local Layer = {}
+Layer.__index = Layer
+
+function Layer:draw(...)
+	assert(self.type == 'tilelayer', 'can only draw tile layers')
+	love.graphics.setColor(255, 255, 255)
+	love.graphics.draw(self._canvas, ...)
+end
+
 local Map = {}
 Map.__index = Map
 
@@ -31,6 +40,8 @@ function Map:init(path)
 		tileset._image = love.graphics.newImage(path)
 	end
 	for _, layer in ipairs(self.layers) do
+		self.layers[layer.name] = layer
+		setmetatable(layer, Layer)
 		if layer.type == 'tilelayer' then
 			self:_renderTileLayer(layer)
 		end
@@ -69,31 +80,6 @@ function Map:_renderTileLayer(layer)
 			end
 		end
 	end)
-end
-
-function Map:getLayer(name)
-	for _, layer in ipairs(self.layers) do
-		if layer.name == name then return layer end
-	end
-	return false
-end
-
-function Map:getObjects(name)
-	local layer = self:getLayer(name)
-	assert(layer, 'layer does not exist')
-	local i = 0
-	return function()
-		i = i + 1
-		return layer.objects[i]
-	end
-end
-
-function Map:drawTileLayer(name, ...)
-	local layer = self:getLayer(name)
-	assert(layer, 'layer does not exist')
-	assert(layer.type == 'tilelayer', 'not a tile layer')
-	love.graphics.setColor(255, 255, 255)
-	love.graphics.draw(layer._canvas, ...)
 end
 
 function cartographer.load(path)
