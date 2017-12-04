@@ -1,5 +1,22 @@
 local cartographer = {}
 
+-- https://stackoverflow.com/a/12191225
+local function splitPath(path)
+    return string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
+end
+
+-- https://github.com/karai17/Simple-Tiled-Implementation/blob/master/sti/utils.lua#L5
+local function formatPath(path)
+	local npGen1, npGen2 = '[^SEP]+SEP%.%.SEP?', 'SEP+%.?SEP'
+	local npPat1, npPat2 = npGen1:gsub('SEP', '/'), npGen2:gsub('SEP', '/')
+	local k
+	repeat path, k = path:gsub(npPat2, '/') until k == 0
+	repeat path, k = path:gsub(npPat1, '') until k == 0
+	if path == '' then path = '.' end
+	return path
+end
+
+-- https://stackoverflow.com/a/9816217
 local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
@@ -7,10 +24,11 @@ end
 local Map = {}
 Map.__index = Map
 
-function Map:init(options)
+function Map:init(path)
+	self.dir = splitPath(path)
 	for _, tileset in ipairs(self.tilesets) do
-		tileset._image = options.tilesets[tileset.name]
-		assert(tileset._image)
+		local path = formatPath(self.dir .. tileset.image)
+		tileset._image = love.graphics.newImage(path)
 	end
 	for _, layer in ipairs(self.layers) do
 		if layer.type == 'tilelayer' then
@@ -78,10 +96,10 @@ function Map:drawTileLayer(name, ...)
 	love.graphics.draw(layer._canvas, ...)
 end
 
-function cartographer.load(options)
-	local map = options.map
+function cartographer.load(path)
+	local map = love.filesystem.load(path)()
 	setmetatable(map, {__index = Map})
-	map:init(options)
+	map:init(path)
 	return map
 end
 

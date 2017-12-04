@@ -1,12 +1,6 @@
 local cartographer = require 'cartographer'
 
-local testMap = cartographer.load {
-	map = require 'test',
-	tilesets = {
-		sheet = love.graphics.newImage 'sheet.png',
-		characters = love.graphics.newImage 'characters.png'
-	},
-}
+local testMap = cartographer.load 'test.lua'
 
 for object in testMap:getObjects 'Geometry' do
 	print(object)
