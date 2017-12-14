@@ -22,38 +22,59 @@ local function getCoordinates(n, w)
 end
 
 local Layer = {}
-Layer.__index = Layer
 
-function Layer:draw(...)
-	love.graphics.setColor(255, 255, 255)
-	if self.type == 'tilelayer' then
-		love.graphics.draw(self._canvas, ...)
-	elseif self.type == 'imagelayer' then
-		love.graphics.draw(self._image, ...)
-	else
-		error 'can only draw tile or image layers'
-	end
+Layer.tilelayer = {}
+Layer.tilelayer.__index = Layer.tilelayer
+
+function Layer.tilelayer:init()
+	self._map:_renderTileLayer(self)
 end
+
+function Layer.tilelayer:draw(...)
+	love.graphics.draw(self._canvas, ...)
+end
+
+Layer.imagelayer = {}
+Layer.imagelayer.__index = Layer.imagelayer
+
+function Layer.imagelayer:init()
+	local path = formatPath(self._map.dir .. self.image)
+	self._image = love.graphics.newImage(path)
+end
+
+function Layer.imagelayer:draw(...)
+	love.graphics.draw(self._image, ...)
+end
+
+Layer.objectgroup = {}
+Layer.objectgroup.__index = Layer.objectgroup
+
+function Layer.objectgroup:init() end
+
+function Layer.objectgroup:draw() end
 
 local Map = {}
 Map.__index = Map
 
 function Map:init(path)
 	self.dir = splitPath(path)
+	self:_loadTilesetImages()
+	self:_initLayers()
+end
+
+function Map:_loadTilesetImages()
 	for _, tileset in ipairs(self.tilesets) do
 		local path = formatPath(self.dir .. tileset.image)
 		tileset._image = love.graphics.newImage(path)
 	end
+end
+
+function Map:_initLayers()
 	for _, layer in ipairs(self.layers) do
 		self.layers[layer.name] = layer
-		setmetatable(layer, Layer)
-		if layer.type == 'tilelayer' then
-			self:_renderTileLayer(layer)
-		end
-		if layer.type == 'imagelayer' then
-			local path = formatPath(self.dir .. layer.image)
-			layer._image = love.graphics.newImage(path)
-		end
+		setmetatable(layer, Layer[layer.type])
+		layer._map = self
+		layer:init()
 	end
 end
 
@@ -93,7 +114,7 @@ end
 
 function cartographer.load(path)
 	local map = love.filesystem.load(path)()
-	setmetatable(map, {__index = Map})
+	setmetatable(map, Map)
 	map:init(path)
 	return map
 end
