@@ -58,8 +58,8 @@ function Layer.imagelayer:_init()
 	self._image = love.graphics.newImage(path)
 end
 
-function Layer.imagelayer:draw(...)
-	love.graphics.draw(self._image, ...)
+function Layer.imagelayer:draw()
+	love.graphics.draw(self._image)
 end
 
 Layer.objectgroup = {}
@@ -110,6 +110,12 @@ function Map:_getTile(gid)
 		ts.tilewidth, ts.tileheight,
 		ts._image:getWidth(), ts._image:getHeight())
 	return ts._image, q
+end
+
+function Map:draw(cx, cy, cw, ch)
+	for _, layer in ipairs(self.layers) do
+		layer:draw(cx, cy, cw, ch)
+	end
 end
 
 function cartographer.load(path)
