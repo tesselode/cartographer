@@ -26,7 +26,7 @@ local Layer = {}
 Layer.tilelayer = {}
 Layer.tilelayer.__index = Layer.tilelayer
 
-function Layer.tilelayer:init() end
+function Layer.tilelayer:_init() end
 
 function Layer.tilelayer:draw(cx, cy, cw, ch)
 	love.graphics.setColor(255, 255, 255)
@@ -53,7 +53,7 @@ end
 Layer.imagelayer = {}
 Layer.imagelayer.__index = Layer.imagelayer
 
-function Layer.imagelayer:init()
+function Layer.imagelayer:_init()
 	local path = formatPath(self._map.dir .. self.image)
 	self._image = love.graphics.newImage(path)
 end
@@ -65,14 +65,14 @@ end
 Layer.objectgroup = {}
 Layer.objectgroup.__index = Layer.objectgroup
 
-function Layer.objectgroup:init() end
+function Layer.objectgroup:_init() end
 
 function Layer.objectgroup:draw() end
 
 local Map = {}
 Map.__index = Map
 
-function Map:init(path)
+function Map:_init(path)
 	self.dir = splitPath(path)
 	self:_loadTilesetImages()
 	self:_initLayers()
@@ -90,7 +90,7 @@ function Map:_initLayers()
 		self.layers[layer.name] = layer
 		setmetatable(layer, Layer[layer.type])
 		layer._map = self
-		layer:init()
+		layer:_init()
 	end
 end
 
@@ -115,7 +115,7 @@ end
 function cartographer.load(path)
 	local map = love.filesystem.load(path)()
 	setmetatable(map, Map)
-	map:init(path)
+	map:_init(path)
 	return map
 end
 
