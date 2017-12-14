@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="2017.12.07" orientation="orthogonal" renderorder="right-down" width="16" height="9" tilewidth="16" tileheight="16" infinite="0" nextobjectid="4">
+<map version="1.0" tiledversion="2017.12.07" orientation="orthogonal" renderorder="right-down" width="16" height="9" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#320000" nextobjectid="4">
  <tileset firstgid="1" source="sheet.tsx"/>
  <tileset firstgid="137" source="characters.tsx"/>
  <group name="Back">

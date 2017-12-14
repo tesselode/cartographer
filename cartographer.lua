@@ -131,6 +131,11 @@ function Map:_getTile(gid)
 end
 
 function Map:draw(cx, cy, cw, ch)
+	if self.backgroundcolor then
+		love.graphics.setColor(self.backgroundcolor)
+		love.graphics.rectangle('fill', 0, 0,
+			self.width * self.tilewidth, self.height * self.tileheight)
+	end
 	for _, layer in ipairs(self.layers) do
 		layer:draw(cx, cy, cw, ch)
 	end
