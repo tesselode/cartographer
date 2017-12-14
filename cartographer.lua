@@ -26,12 +26,28 @@ local Layer = {}
 Layer.tilelayer = {}
 Layer.tilelayer.__index = Layer.tilelayer
 
-function Layer.tilelayer:init()
-	self._map:_renderTileLayer(self)
-end
+function Layer.tilelayer:init() end
 
-function Layer.tilelayer:draw(...)
-	love.graphics.draw(self._canvas, ...)
+function Layer.tilelayer:draw(cx, cy, cw, ch)
+	love.graphics.setColor(255, 255, 255)
+	for n, gid in ipairs(self.data) do
+		if gid ~= 0 then
+			local gx, gy = getCoordinates(n, self.width)
+			local tw, th = self._map.tilewidth, self._map.tileheight
+			local tx, ty = gx * tw, gy * th
+			local drawTile = true
+			if cx and cy and cw and ch then
+				drawTile = tx < cx + cw and
+				           cx < tx + tw and
+				           ty < cy + ch and
+				           cy < ty + th
+			end
+			if drawTile then
+				local image, q = self._map:_getTile(gid)
+				love.graphics.draw(image, q, tx, ty)
+			end
+		end
+	end
 end
 
 Layer.imagelayer = {}
@@ -94,22 +110,6 @@ function Map:_getTile(gid)
 		ts.tilewidth, ts.tileheight,
 		ts._image:getWidth(), ts._image:getHeight())
 	return ts._image, q
-end
-
-function Map:_renderTileLayer(layer)
-	layer._canvas = love.graphics.newCanvas(layer.width * self.tilewidth,
-		layer.height * self.tileheight)
-	layer._canvas:renderTo(function()
-		love.graphics.setColor(255, 255, 255)
-		for n, gid in ipairs(layer.data) do
-			if gid ~= 0 then
-				local x, y = getCoordinates(n, layer.width)
-				local image, q = self:_getTile(gid)
-				love.graphics.draw(image, q,
-					x * self.tilewidth, y * self.tileheight)
-			end
-		end
-	end)
 end
 
 function cartographer.load(path)
