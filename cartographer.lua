@@ -69,6 +69,24 @@ function Layer.objectgroup:_init() end
 
 function Layer.objectgroup:draw() end
 
+Layer.group = {}
+Layer.group.__index = Layer.group
+
+function Layer.group:_init()
+	for _, layer in ipairs(self.layers) do
+		self.layers[layer.name] = layer
+		setmetatable(layer, Layer[layer.type])
+		layer._map = self._map
+		layer:_init()
+	end
+end
+
+function Layer.group:draw(cx, cy, cw, ch)
+	for _, layer in ipairs(self.layers) do
+		layer:draw(cx, cy, cw, ch)
+	end
+end
+
 local Map = {}
 Map.__index = Map
 
