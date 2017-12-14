@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="2017.11.22" orientation="orthogonal" renderorder="right-down" width="16" height="9" tilewidth="16" tileheight="16" infinite="0" nextobjectid="4">
+<map version="1.0" tiledversion="2017.12.07" orientation="orthogonal" renderorder="right-down" width="16" height="9" tilewidth="16" tileheight="16" infinite="0" nextobjectid="4">
  <tileset firstgid="1" source="sheet.tsx"/>
  <tileset firstgid="137" source="characters.tsx"/>
  <layer name="Back tiles" width="16" height="9">
@@ -15,6 +15,9 @@
 111,111,111,111,111,111,111,111,111,111,111,111,111,111,111,111
 </data>
  </layer>
+ <imagelayer name="Sun">
+  <image source="sun.png" width="256" height="144"/>
+ </imagelayer>
  <layer name="Main tiles" width="16" height="9">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

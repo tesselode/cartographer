@@ -1,7 +1,7 @@
 return {
   version = "1.1",
   luaversion = "5.1",
-  tiledversion = "2017.11.22",
+  tiledversion = "2017.12.07",
   orientation = "orthogonal",
   renderorder = "right-down",
   width = 16,
@@ -87,6 +87,16 @@ return {
         94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94,
         111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111, 111
       }
+    },
+    {
+      type = "imagelayer",
+      name = "Sun",
+      visible = true,
+      opacity = 1,
+      offsetx = 0,
+      offsety = 0,
+      image = "sun.png",
+      properties = {}
     },
     {
       type = "tilelayer",

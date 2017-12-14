@@ -25,9 +25,14 @@ local Layer = {}
 Layer.__index = Layer
 
 function Layer:draw(...)
-	assert(self.type == 'tilelayer', 'can only draw tile layers')
 	love.graphics.setColor(255, 255, 255)
-	love.graphics.draw(self._canvas, ...)
+	if self.type == 'tilelayer' then
+		love.graphics.draw(self._canvas, ...)
+	elseif self.type == 'imagelayer' then
+		love.graphics.draw(self._image, ...)
+	else
+		error 'can only draw tile or image layers'
+	end
 end
 
 local Map = {}
@@ -44,6 +49,10 @@ function Map:init(path)
 		setmetatable(layer, Layer)
 		if layer.type == 'tilelayer' then
 			self:_renderTileLayer(layer)
+		end
+		if layer.type == 'imagelayer' then
+			local path = formatPath(self.dir .. layer.image)
+			layer._image = love.graphics.newImage(path)
 		end
 	end
 end
