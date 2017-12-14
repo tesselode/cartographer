@@ -26,27 +26,25 @@ local Layer = {}
 Layer.tilelayer = {}
 Layer.tilelayer.__index = Layer.tilelayer
 
-function Layer.tilelayer:_init() end
-
-function Layer.tilelayer:draw(cx, cy, cw, ch)
-	love.graphics.setColor(255, 255, 255)
+function Layer.tilelayer:_init()
+	self._spriteBatches = {}
+	for _, tileset in ipairs(self._map.tilesets) do
+		self._spriteBatches[tileset._image] = love.graphics.newSpriteBatch(tileset._image, #self.data)
+	end
 	for n, gid in ipairs(self.data) do
 		if gid ~= 0 then
-			local gx, gy = getCoordinates(n, self.width)
-			local tw, th = self._map.tilewidth, self._map.tileheight
-			local tx, ty = gx * tw, gy * th
-			local drawTile = true
-			if cx and cy and cw and ch then
-				drawTile = tx < cx + cw and
-				           cx < tx + tw and
-				           ty < cy + ch and
-				           cy < ty + th
-			end
-			if drawTile then
-				local image, q = self._map:_getTile(gid)
-				love.graphics.draw(image, q, tx, ty)
-			end
+			local x, y = getCoordinates(n, self.width)
+			local image, q = self._map:_getTile(gid)
+			self._spriteBatches[image]:add(q,
+				x * self._map.tilewidth, y * self._map.tileheight)
 		end
+	end
+end
+
+function Layer.tilelayer:draw()
+	love.graphics.setColor(255, 255, 255)
+	for _, spriteBatch in pairs(self._spriteBatches) do
+		love.graphics.draw(spriteBatch)
 	end
 end
 
@@ -81,9 +79,9 @@ function Layer.group:_init()
 	end
 end
 
-function Layer.group:draw(cx, cy, cw, ch)
+function Layer.group:draw()
 	for _, layer in ipairs(self.layers) do
-		layer:draw(cx, cy, cw, ch)
+		layer:draw()
 	end
 end
 
@@ -130,14 +128,14 @@ function Map:_getTile(gid)
 	return ts._image, q
 end
 
-function Map:draw(cx, cy, cw, ch)
+function Map:draw()
 	if self.backgroundcolor then
 		love.graphics.setColor(self.backgroundcolor)
 		love.graphics.rectangle('fill', 0, 0,
 			self.width * self.tilewidth, self.height * self.tileheight)
 	end
 	for _, layer in ipairs(self.layers) do
-		layer:draw(cx, cy, cw, ch)
+		layer:draw()
 	end
 end
 
