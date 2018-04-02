@@ -69,7 +69,7 @@ function Layer.tilelayer:_init()
 end
 
 function Layer.tilelayer:draw()
-	love.graphics.setColor(255, 255, 255)
+	love.graphics.setColor(1, 1, 1)
 	for _, spriteBatch in pairs(self._spriteBatches) do
 		love.graphics.draw(spriteBatch)
 	end
