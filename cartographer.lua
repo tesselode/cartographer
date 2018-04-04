@@ -85,6 +85,7 @@ function Layer.imagelayer:_init()
 end
 
 function Layer.imagelayer:draw()
+	love.graphics.setColor(1, 1, 1)
 	love.graphics.draw(self._image)
 end
 
