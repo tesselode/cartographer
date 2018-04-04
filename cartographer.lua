@@ -48,6 +48,15 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
+local LayerList = {
+	__index = function(self, k)
+		for _, layer in ipairs(self) do
+			if layer.name == k then return layer end
+		end
+		return rawget(self, k)
+	end,
+}
+
 local Layer = {}
 
 Layer.tilelayer = {}
@@ -99,11 +108,11 @@ Layer.group.__index = Layer.group
 
 function Layer.group:_init()
 	for _, layer in ipairs(self.layers) do
-		self.layers[layer.name] = layer
 		setmetatable(layer, Layer[layer.type])
 		layer._map = self._map
 		layer:_init()
 	end
+	setmetatable(self.layers, LayerList)
 end
 
 function Layer.group:draw()
@@ -130,11 +139,11 @@ end
 
 function Map:_initLayers()
 	for _, layer in ipairs(self.layers) do
-		self.layers[layer.name] = layer
 		setmetatable(layer, Layer[layer.type])
 		layer._map = self
 		layer:_init()
 	end
+	setmetatable(self.layers, LayerList)
 end
 
 function Map:_getTileset(gid)
