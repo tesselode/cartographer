@@ -62,25 +62,17 @@ local Layer = {}
 Layer.tilelayer = {}
 Layer.tilelayer.__index = Layer.tilelayer
 
-function Layer.tilelayer:_init()
-	self._spriteBatches = {}
-	for _, tileset in ipairs(self._map.tilesets) do
-		self._spriteBatches[tileset._image] = love.graphics.newSpriteBatch(tileset._image, #self.data)
-	end
+function Layer.tilelayer:_init() end
+
+function Layer.tilelayer:draw()
+	love.graphics.setColor(1, 1, 1)
 	for n, gid in ipairs(self.data) do
 		if gid ~= 0 then
 			local x, y = getCoordinates(n, self.width)
 			local image, q = self._map:_getTile(gid)
-			self._spriteBatches[image]:add(q,
-				x * self._map.tilewidth, y * self._map.tileheight)
+			love.graphics.draw(image, q, x * self._map.tilewidth,
+				y * self._map.tileheight)
 		end
-	end
-end
-
-function Layer.tilelayer:draw()
-	love.graphics.setColor(1, 1, 1)
-	for _, spriteBatch in pairs(self._spriteBatches) do
-		love.graphics.draw(spriteBatch)
 	end
 end
 
