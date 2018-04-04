@@ -164,12 +164,19 @@ function Map:_getTile(gid)
 	return ts._image, q
 end
 
-function Map:draw()
+function Map:_drawBackground()
 	if self.backgroundcolor then
-		love.graphics.setColor(self.backgroundcolor)
+		local r = self.backgroundcolor[1] / 255
+		local g = self.backgroundcolor[2] / 255
+		local b = self.backgroundcolor[3] / 255
+		love.graphics.setColor(r, g, b)
 		love.graphics.rectangle('fill', 0, 0,
 			self.width * self.tilewidth, self.height * self.tileheight)
 	end
+end
+
+function Map:draw()
+	self:_drawBackground()
 	for _, layer in ipairs(self.layers) do
 		layer:draw()
 	end
