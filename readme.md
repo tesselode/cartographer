@@ -42,6 +42,13 @@ While you can access layers by numerical index as usual, Cartographer allows you
 map.layers[name]:draw()
 ```
 
+### Getting the size of the map in pixels
+
+```lua
+local width = map:getPixelWidth()
+local height = map:getPixelHeight()
+```
+
 ## License
 
 MIT License

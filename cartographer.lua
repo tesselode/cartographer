@@ -171,8 +171,16 @@ function Map:_drawBackground()
 		local b = self.backgroundcolor[3] / 255
 		love.graphics.setColor(r, g, b)
 		love.graphics.rectangle('fill', 0, 0,
-			self.width * self.tilewidth, self.height * self.tileheight)
+			self:getPixelWidth(), self:getPixelHeight())
 	end
+end
+
+function Map:getPixelWidth()
+	return self.width * self.tilewidth
+end
+
+function Map:getPixelHeight()
+	return self.height * self.tileheight
 end
 
 function Map:draw()
