@@ -110,7 +110,9 @@ end
 
 function Layer.group:draw()
 	for _, layer in ipairs(self.layers) do
-		layer:draw()
+		if layer.visible then
+			layer:draw()
+		end
 	end
 end
 
@@ -179,7 +181,9 @@ end
 function Map:draw()
 	self:_drawBackground()
 	for _, layer in ipairs(self.layers) do
-		layer:draw()
+		if layer.visible then
+			layer:draw()
+		end
 	end
 end
 
