@@ -28,6 +28,14 @@ Loads a Tiled map in Lua format.
 map:draw()
 ```
 
+### Updating the map
+
+```lua
+map:update(dt)
+```
+
+You only need to do this if your map has animated tiles.
+
 ### Accessing layers by name
 
 ```lua
