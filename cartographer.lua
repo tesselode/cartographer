@@ -48,6 +48,54 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
+local Tileset = {}
+Tileset.__index = Tileset
+
+function Tileset:_initAnimations()
+	self._animations = {}
+	for _, tile in ipairs(self.tiles) do
+		if tile.animation then
+			self._animations[tile.id + 1] = {
+				frames = tile.animation,
+				currentFrame = 1,
+				timer = tile.animation[1].duration,
+			}
+		end
+	end
+end
+
+function Tileset:_init()
+	local path = formatPath(self._map.dir .. self.image)
+	self._image = love.graphics.newImage(path)
+	self:_initAnimations()
+end
+
+function Tileset:_update(dt)
+	for _, animation in pairs(self._animations) do
+		animation.timer = animation.timer - 1000 * dt
+		while animation.timer <= 0 do
+			animation.currentFrame = animation.currentFrame + 1
+			if animation.currentFrame > #animation.frames then
+				animation.currentFrame = 1
+			end
+			animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
+		end
+	end
+end
+
+function Tileset:_getTile(gid)
+	if self._animations[gid] then
+		local a = self._animations[gid]
+		gid = a.frames[a.currentFrame].tileid + 1
+	end
+	local x, y = getCoordinates(gid - self.firstgid + 1,
+		self._image:getWidth() / self.tilewidth)
+	local q = love.graphics.newQuad(x * self.tilewidth, y * self.tileheight,
+		self.tilewidth, self.tileheight,
+		self._image:getWidth(), self._image:getHeight())
+	return self._image, q
+end
+
 local LayerList = {
 	__index = function(self, k)
 		for _, layer in ipairs(self) do
@@ -121,14 +169,15 @@ Map.__index = Map
 
 function Map:_init(path)
 	self.dir = splitPath(path)
-	self:_loadTilesetImages()
+	self:_initTilesets()
 	self:_initLayers()
 end
 
-function Map:_loadTilesetImages()
+function Map:_initTilesets()
 	for _, tileset in ipairs(self.tilesets) do
-		local path = formatPath(self.dir .. tileset.image)
-		tileset._image = love.graphics.newImage(path)
+		setmetatable(tileset, Tileset)
+		tileset._map = self
+		tileset:_init()
 	end
 end
 
@@ -150,13 +199,7 @@ function Map:_getTileset(gid)
 end
 
 function Map:_getTile(gid)
-	local ts = self:_getTileset(gid)
-	local x, y = getCoordinates(gid - ts.firstgid + 1,
-		ts._image:getWidth() / ts.tilewidth)
-	local q = love.graphics.newQuad(x * ts.tilewidth, y * ts.tileheight,
-		ts.tilewidth, ts.tileheight,
-		ts._image:getWidth(), ts._image:getHeight())
-	return ts._image, q
+	return self:_getTileset(gid):_getTile(gid)
 end
 
 function Map:_drawBackground()
@@ -176,6 +219,12 @@ end
 
 function Map:getPixelHeight()
 	return self.height * self.tileheight
+end
+
+function Map:update(dt)
+	for _, tileset in ipairs(self.tilesets) do
+		tileset:_update(dt)
+	end
 end
 
 function Map:draw()
