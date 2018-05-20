@@ -110,7 +110,21 @@ local Layer = {}
 Layer.tilelayer = {}
 Layer.tilelayer.__index = Layer.tilelayer
 
-function Layer.tilelayer:_init() end
+function Layer.tilelayer:_init()
+	self._spriteBatches = {}
+	for _, tileset in pairs(self._map.tilesets) do
+		self._spriteBatches[tileset] = love.graphics.newSpriteBatch(tileset._image)
+	end
+	for n, gid in ipairs(self.data) do
+		if gid ~= 0 then
+			local tileX, tileY = getCoordinates(n, self.width)
+			local tileset = self._map:_getTileset(gid)
+			local _, q = self._map:_getTile(gid)
+			self._spriteBatches[tileset]:add(q, tileX * self._map.tilewidth,
+				tileY * self._map.tileheight)
+		end
+	end
+end
 
 function Layer.tilelayer:_isTileVisible(tileX, tileY, x, y, w, h)
 	if not (x and y and w and h) then return true end
@@ -124,15 +138,8 @@ end
 
 function Layer.tilelayer:draw(x, y, w, h)
 	love.graphics.setColor(1, 1, 1)
-	for n, gid in ipairs(self.data) do
-		if gid ~= 0 then
-			local tileX, tileY = getCoordinates(n, self.width)
-			if self:_isTileVisible(tileX, tileY, x, y, w, h) then
-				local image, q = self._map:_getTile(gid)
-				love.graphics.draw(image, q, tileX * self._map.tilewidth,
-					tileY * self._map.tileheight)
-			end
-		end
+	for _, spriteBatch in pairs(self._spriteBatches) do
+		love.graphics.draw(spriteBatch)
 	end
 end
 
