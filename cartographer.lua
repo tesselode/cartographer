@@ -86,17 +86,17 @@ function Tileset:_update(dt)
 	end
 end
 
-function Tileset:_getTile(gid)
+function Tileset:_getQuad(gid)
 	if self._animations[gid] then
 		local a = self._animations[gid]
 		gid = a.frames[a.currentFrame].tileid + 1
 	end
 	local x, y = getCoordinates(gid - self.firstgid + 1,
 		self._image:getWidth() / self.tilewidth)
-	local q = love.graphics.newQuad(x * self.tilewidth, y * self.tileheight,
+	local quad = love.graphics.newQuad(x * self.tilewidth, y * self.tileheight,
 		self.tilewidth, self.tileheight,
 		self._image:getWidth(), self._image:getHeight())
-	return self._image, q
+	return quad
 end
 
 local LayerList = {
@@ -123,9 +123,9 @@ function Layer.tilelayer:_init()
 	for n, gid in ipairs(self.data) do
 		if gid ~= 0 then
 			local tileset = self._map:_getTileset(gid)
-			local tileX, tileY = getCoordinates(n, self.width)
-			local _, q = self._map:_getTile(gid)
-			local x, y = tileX * self._map.tilewidth, tileY * self._map.tileheight
+			local q = tileset:_getQuad(gid)
+			local x, y = getCoordinates(n, self.width)
+			x, y = x * self._map.tilewidth, y * self._map.tileheight
 			local sprite = self._spriteBatches[tileset]:add(q, x, y)
 			if tileset._animations[gid] then
 				self._animatedTiles[tileset][gid] = self._animatedTiles[tileset][gid] or {}
@@ -139,22 +139,12 @@ function Layer.tilelayer:_init()
 	end
 end
 
-function Layer.tilelayer:_isTileVisible(tileX, tileY, x, y, w, h)
-	if not (x and y and w and h) then return true end
-	local tw, th = self._map.tilewidth, self._map.tileheight
-	local tx, ty = tileX * tw, tileY * th
-	return tx + tw > x
-	   and ty + th > y
-	   and tx < x + w
-	   and ty < y + h
-end
-
-function Layer.tilelayer:update(dt)
+function Layer.tilelayer:_update(dt)
 	for tileset, spriteBatch in pairs(self._spriteBatches) do
 		for gid, animation in pairs(tileset._animations) do
 			if self._animatedTiles[tileset][gid] and animation.changed then
 				for _, tile in pairs(self._animatedTiles[tileset][gid]) do
-					local _, q = self._map:_getTile(gid)
+					local q = tileset:_getQuad(gid)
 					spriteBatch:set(tile.sprite, q, tile.x, tile.y)
 				end
 			end
@@ -162,7 +152,7 @@ function Layer.tilelayer:update(dt)
 	end
 end
 
-function Layer.tilelayer:draw(x, y, w, h)
+function Layer.tilelayer:draw()
 	love.graphics.setColor(1, 1, 1)
 	for _, spriteBatch in pairs(self._spriteBatches) do
 		love.graphics.draw(spriteBatch)
@@ -177,7 +167,7 @@ function Layer.imagelayer:_init()
 	self._image = love.graphics.newImage(path)
 end
 
-function Layer.imagelayer:update(dt) end
+function Layer.imagelayer:_update(dt) end
 
 function Layer.imagelayer:draw(x, y, w, h)
 	love.graphics.setColor(1, 1, 1)
@@ -189,7 +179,7 @@ Layer.objectgroup.__index = Layer.objectgroup
 
 function Layer.objectgroup:_init() end
 
-function Layer.objectgroup:update(dt) end
+function Layer.objectgroup:_update(dt) end
 
 function Layer.objectgroup:draw(x, y, w, h) end
 
@@ -205,7 +195,7 @@ function Layer.group:_init()
 	setmetatable(self.layers, LayerList)
 end
 
-function Layer.group:update(dt) end
+function Layer.group:_update(dt) end
 
 function Layer.group:draw(x, y, w, h)
 	for _, layer in ipairs(self.layers) do
@@ -249,10 +239,6 @@ function Map:_getTileset(gid)
 	end
 end
 
-function Map:_getTile(gid)
-	return self:_getTileset(gid):_getTile(gid)
-end
-
 function Map:_drawBackground()
 	if self.backgroundcolor then
 		local r = self.backgroundcolor[1] / 255
@@ -277,7 +263,7 @@ function Map:update(dt)
 		tileset:_update(dt)
 	end
 	for _, layer in ipairs(self.layers) do
-		layer:update(dt)
+		layer:_update(dt)
 	end
 end
 
