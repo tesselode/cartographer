@@ -59,6 +59,7 @@ function Tileset:_initAnimations()
 				frames = tile.animation,
 				currentFrame = 1,
 				timer = tile.animation[1].duration,
+				changed = false,
 			}
 		end
 	end
@@ -72,6 +73,7 @@ end
 
 function Tileset:_update(dt)
 	for _, animation in pairs(self._animations) do
+		animation.changed = false
 		animation.timer = animation.timer - 1000 * dt
 		while animation.timer <= 0 do
 			animation.currentFrame = animation.currentFrame + 1
@@ -79,6 +81,7 @@ function Tileset:_update(dt)
 				animation.currentFrame = 1
 			end
 			animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
+			animation.changed = true
 		end
 	end
 end
@@ -112,16 +115,26 @@ Layer.tilelayer.__index = Layer.tilelayer
 
 function Layer.tilelayer:_init()
 	self._spriteBatches = {}
+	self._animatedTiles = {}
 	for _, tileset in pairs(self._map.tilesets) do
 		self._spriteBatches[tileset] = love.graphics.newSpriteBatch(tileset._image)
+		self._animatedTiles[tileset] = {}
 	end
 	for n, gid in ipairs(self.data) do
 		if gid ~= 0 then
-			local tileX, tileY = getCoordinates(n, self.width)
 			local tileset = self._map:_getTileset(gid)
+			local tileX, tileY = getCoordinates(n, self.width)
 			local _, q = self._map:_getTile(gid)
-			self._spriteBatches[tileset]:add(q, tileX * self._map.tilewidth,
-				tileY * self._map.tileheight)
+			local x, y = tileX * self._map.tilewidth, tileY * self._map.tileheight
+			local sprite = self._spriteBatches[tileset]:add(q, x, y)
+			if tileset._animations[gid] then
+				self._animatedTiles[tileset][gid] = self._animatedTiles[tileset][gid] or {}
+				table.insert(self._animatedTiles[tileset][gid], {
+					sprite = sprite,
+					x = x,
+					y = y,
+				})
+			end
 		end
 	end
 end
@@ -134,6 +147,19 @@ function Layer.tilelayer:_isTileVisible(tileX, tileY, x, y, w, h)
 	   and ty + th > y
 	   and tx < x + w
 	   and ty < y + h
+end
+
+function Layer.tilelayer:update(dt)
+	for tileset, spriteBatch in pairs(self._spriteBatches) do
+		for gid, animation in pairs(tileset._animations) do
+			if self._animatedTiles[tileset][gid] and animation.changed then
+				for _, tile in pairs(self._animatedTiles[tileset][gid]) do
+					local _, q = self._map:_getTile(gid)
+					spriteBatch:set(tile.sprite, q, tile.x, tile.y)
+				end
+			end
+		end
+	end
 end
 
 function Layer.tilelayer:draw(x, y, w, h)
@@ -151,6 +177,8 @@ function Layer.imagelayer:_init()
 	self._image = love.graphics.newImage(path)
 end
 
+function Layer.imagelayer:update(dt) end
+
 function Layer.imagelayer:draw(x, y, w, h)
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.draw(self._image)
@@ -160,6 +188,8 @@ Layer.objectgroup = {}
 Layer.objectgroup.__index = Layer.objectgroup
 
 function Layer.objectgroup:_init() end
+
+function Layer.objectgroup:update(dt) end
 
 function Layer.objectgroup:draw(x, y, w, h) end
 
@@ -174,6 +204,8 @@ function Layer.group:_init()
 	end
 	setmetatable(self.layers, LayerList)
 end
+
+function Layer.group:update(dt) end
 
 function Layer.group:draw(x, y, w, h)
 	for _, layer in ipairs(self.layers) do
@@ -243,6 +275,9 @@ end
 function Map:update(dt)
 	for _, tileset in ipairs(self.tilesets) do
 		tileset:_update(dt)
+	end
+	for _, layer in ipairs(self.layers) do
+		layer:update(dt)
 	end
 end
 
