@@ -185,7 +185,7 @@ end
 
 function Layer.imagelayer:_update(dt) end
 
-function Layer.imagelayer:draw(x, y, w, h)
+function Layer.imagelayer:draw()
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.draw(self._image)
 end
@@ -197,7 +197,7 @@ function Layer.objectgroup:_init() end
 
 function Layer.objectgroup:_update(dt) end
 
-function Layer.objectgroup:draw(x, y, w, h) end
+function Layer.objectgroup:draw() end
 
 Layer.group = {}
 Layer.group.__index = Layer.group
@@ -213,10 +213,10 @@ end
 
 function Layer.group:_update(dt) end
 
-function Layer.group:draw(x, y, w, h)
+function Layer.group:draw()
 	for _, layer in ipairs(self.layers) do
 		if layer.visible then
-			layer:draw(x, y, w, h)
+			layer:draw()
 		end
 	end
 end
@@ -283,11 +283,11 @@ function Map:update(dt)
 	end
 end
 
-function Map:draw(x, y, w, h)
+function Map:draw()
 	self:_drawBackground()
 	for _, layer in ipairs(self.layers) do
 		if layer.visible then
-			layer:draw(x, y, w, h)
+			layer:draw()
 		end
 	end
 end

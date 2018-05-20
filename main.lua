@@ -7,6 +7,6 @@ function love.update(dt)
 end
 
 function love.draw()
-	testMap:draw(0, 0, 800, 600)
+	testMap:draw()
 	love.graphics.print(love.timer.getFPS())
 end
