@@ -113,13 +113,25 @@ local Layer = {}
 Layer.tilelayer = {}
 Layer.tilelayer.__index = Layer.tilelayer
 
-function Layer.tilelayer:_init()
+function Layer.tilelayer:_createSpriteBatches()
 	self._spriteBatches = {}
 	self._animatedTiles = {}
 	for _, tileset in pairs(self._map.tilesets) do
 		self._spriteBatches[tileset] = love.graphics.newSpriteBatch(tileset._image)
 		self._animatedTiles[tileset] = {}
 	end
+end
+
+function Layer.tilelayer:_rememberAnimatedTile(tileset, gid, sprite, x, y)
+	self._animatedTiles[tileset][gid] = self._animatedTiles[tileset][gid] or {}
+	table.insert(self._animatedTiles[tileset][gid], {
+		sprite = sprite,
+		x = x,
+		y = y,
+	})
+end
+
+function Layer.tilelayer:_fillSpriteBatches()
 	for n, gid in ipairs(self.data) do
 		if gid ~= 0 then
 			local tileset = self._map:_getTileset(gid)
@@ -128,18 +140,18 @@ function Layer.tilelayer:_init()
 			x, y = x * self._map.tilewidth, y * self._map.tileheight
 			local sprite = self._spriteBatches[tileset]:add(q, x, y)
 			if tileset._animations[gid] then
-				self._animatedTiles[tileset][gid] = self._animatedTiles[tileset][gid] or {}
-				table.insert(self._animatedTiles[tileset][gid], {
-					sprite = sprite,
-					x = x,
-					y = y,
-				})
+				self:_rememberAnimatedTile(tileset, gid, sprite, x, y)
 			end
 		end
 	end
 end
 
-function Layer.tilelayer:_update(dt)
+function Layer.tilelayer:_init()
+	self:_createSpriteBatches()
+	self:_fillSpriteBatches()
+end
+
+function Layer.tilelayer:_updateAnimatedTiles()
 	for tileset, spriteBatch in pairs(self._spriteBatches) do
 		for gid, animation in pairs(tileset._animations) do
 			if self._animatedTiles[tileset][gid] and animation.changed then
@@ -150,6 +162,10 @@ function Layer.tilelayer:_update(dt)
 			end
 		end
 	end
+end
+
+function Layer.tilelayer:_update(dt)
+	self:_updateAnimatedTiles()
 end
 
 function Layer.tilelayer:draw()
