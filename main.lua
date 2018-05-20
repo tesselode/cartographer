@@ -1,6 +1,6 @@
 local cartographer = require 'cartographer'
 
-local testMap = cartographer.load 'demo/infinite.lua'
+local testMap = cartographer.load 'demo/offset.lua'
 
 function love.update(dt)
 	testMap:update(dt)

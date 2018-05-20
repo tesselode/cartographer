@@ -131,19 +131,25 @@ function Layer.tilelayer:_rememberAnimatedTile(tileset, gid, sprite, x, y)
 	})
 end
 
-function Layer.tilelayer:_fillSpriteBatches(data, ox, oy, width)
+function Layer.tilelayer:_getTilePosition(n, width, chunkOffsetX, chunkOffsetY)
+	local x, y = getCoordinates(n, width)
+	x, y = x + chunkOffsetX, y + chunkOffsetY
+	x, y = x * self._map.tilewidth, y * self._map.tileheight
+	x, y = x + self.offsetx, y + self.offsety
+	return x, y
+end
+
+function Layer.tilelayer:_fillSpriteBatches(data, chunkOffsetX, chunkOffsetY, width)
 	data = data or self.data
-	ox = ox or 0
-	oy = oy or 0
+	chunkOffsetX = chunkOffsetX or 0
+	chunkOffsetY = chunkOffsetY or 0
 	width = width or self.width
 	if data then
 		for n, gid in ipairs(data) do
 			if gid ~= 0 then
 				local tileset = self._map:_getTileset(gid)
 				local q = tileset:_getQuad(gid)
-				local x, y = getCoordinates(n, width)
-				x, y = x + ox, y + oy
-				x, y = x * self._map.tilewidth, y * self._map.tileheight
+				local x, y = self:_getTilePosition(n, width, chunkOffsetX, chunkOffsetY)
 				local sprite = self._spriteBatches[tileset]:add(q, x, y)
 				if tileset._animations[gid] then
 					self:_rememberAnimatedTile(tileset, gid, sprite, x, y)
