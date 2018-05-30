@@ -68,6 +68,7 @@ end
 function Tileset:_init()
 	local path = formatPath(self._map.dir .. self.image)
 	self._image = love.graphics.newImage(path)
+	self._tilesPerRow = math.floor(self._image:getWidth() / (self.tilewidth + self.spacing))
 	self:_initAnimations()
 end
 
@@ -91,9 +92,10 @@ function Tileset:_getQuad(gid)
 		local a = self._animations[gid]
 		gid = a.frames[a.currentFrame].tileid + 1
 	end
-	local x, y = getCoordinates(gid - self.firstgid + 1,
-		self._image:getWidth() / self.tilewidth)
-	local quad = love.graphics.newQuad(x * self.tilewidth, y * self.tileheight,
+	local x, y = getCoordinates(gid - self.firstgid + 1, self._tilesPerRow)
+	local quad = love.graphics.newQuad(
+		x * (self.tilewidth + self.spacing),
+		y * (self.tileheight + self.spacing),
 		self.tilewidth, self.tileheight,
 		self._image:getWidth(), self._image:getHeight())
 	return quad
