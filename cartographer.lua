@@ -293,6 +293,40 @@ function Map:getPixelHeight()
 	return self.height * self.tileheight
 end
 
+local function getObjects(parent)
+	local objects = {}
+	for _, layer in ipairs(parent.layers) do
+		if layer.type == 'objectgroup' then
+			for _, object in ipairs(layer.objects) do
+				table.insert(objects, {layer = layer, object = object})
+			end
+		elseif layer.type == 'group' then
+			local layerObjects = getObjects(layer)
+			for _, object in ipairs(layerObjects) do
+				table.insert(objects, object)
+			end
+		end
+	end
+	return objects
+end
+
+function Map:getObjects(objectFields)
+	local objects = getObjects(self)
+	local i = 0
+	return function()
+		i = i + 1
+		local object = objects[i]
+		if not object then return end
+		local returns = {object.layer, object.object}
+		if objectFields then
+			for _, field in ipairs(objectFields) do
+				table.insert(returns, object.object[field])
+			end
+		end
+		return unpack(returns)
+	end
+end
+
 function Map:update(dt)
 	for _, tileset in ipairs(self.tilesets) do
 		tileset:_update(dt)
