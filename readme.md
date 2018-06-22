@@ -57,7 +57,7 @@ local width = map:getPixelWidth()
 local height = map:getPixelHeight()
 ```
 
-### Iterating over every object in the map
+### Iterating over every object in the map or objects in an individual layer
 
 ```lua
 for layer, object, ... in map:getObjects(fields) do
@@ -70,5 +70,13 @@ Cartographer lets you iterate through every object in the map using a for loop. 
 ```lua
 for layer, object, n, x, y in map:getObjects {'name', 'x', 'y'} do
 	print(layer, object, n, x, y)
+end
+```
+
+You can also use `getObjects` on individual object or group layers.
+
+```lua
+for layer, object in map.layers.entities:getObjects() do
+	print(layer, object)
 end
 ```

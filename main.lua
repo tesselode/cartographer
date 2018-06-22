@@ -2,7 +2,8 @@ local cartographer = require 'cartographer'
 
 local testMap = cartographer.load 'demo/groups.lua'
 
-for layer, object, type, x, y in testMap:getObjects {'type', 'x', 'y'} do
+local triggers = testMap.layers['Group 1'].layers['Group 2'].layers.Triggers
+for layer, object, type, x, y in triggers:getObjects {'type', 'x', 'y'} do
 	print(layer, object, type, x, y)
 end
 
