@@ -48,22 +48,6 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
-local function makeObjectIterator(objects, objectFields)
-	local i = 0
-	return function()
-		i = i + 1
-		local object = objects[i]
-		if not object then return end
-		local returns = {object.layer, object.object}
-		if objectFields then
-			for _, field in ipairs(objectFields) do
-				table.insert(returns, object.object[field])
-			end
-		end
-		return unpack(returns)
-	end
-end
-
 local Tileset = {}
 Tileset.__index = Tileset
 
@@ -232,18 +216,6 @@ function Layer.objectgroup:_init() end
 
 function Layer.objectgroup:_update(dt) end
 
-function Layer.objectgroup:_getObjects()
-	local objects = {}
-	for _, object in ipairs(self.objects) do
-		table.insert(objects, {layer = self, object = object})
-	end
-	return objects
-end
-
-function Layer.objectgroup:getObjects(objectFields)
-	return makeObjectIterator(self:_getObjects(), objectFields)
-end
-
 function Layer.objectgroup:draw() end
 
 Layer.group = {}
@@ -260,27 +232,9 @@ end
 
 function Layer.group:_update(dt) end
 
-function Layer.group:_getObjects()
-	local objects = {}
-	for _, layer in ipairs(self.layers) do
-		if layer._getObjects then
-			for _, object in ipairs(layer:_getObjects()) do
-				table.insert(objects, object)
-			end
-		end
-	end
-	return objects
-end
-
-function Layer.group:getObjects(objectFields)
-	return makeObjectIterator(self:_getObjects(), objectFields)
-end
-
 function Layer.group:draw()
 	for _, layer in ipairs(self.layers) do
-		if layer.visible then
-			layer:draw()
-		end
+		if layer.visible then layer:draw() end
 	end
 end
 
@@ -325,32 +279,9 @@ function Map:_drawBackground()
 		local b = self.backgroundcolor[3] / 255
 		love.graphics.setColor(r, g, b)
 		love.graphics.rectangle('fill', 0, 0,
-			self:getPixelWidth(), self:getPixelHeight())
+			self.width * self.tilewidth,
+			self.height * self.tileheight)
 	end
-end
-
-function Map:getPixelWidth()
-	return self.width * self.tilewidth
-end
-
-function Map:getPixelHeight()
-	return self.height * self.tileheight
-end
-
-function Map:_getObjects()
-	local objects = {}
-	for _, layer in ipairs(self.layers) do
-		if layer._getObjects then
-			for _, object in ipairs(layer:_getObjects()) do
-				table.insert(objects, object)
-			end
-		end
-	end
-	return objects
-end
-
-function Map:getObjects(objectFields)
-	return makeObjectIterator(self:_getObjects(), objectFields)
 end
 
 function Map:update(dt)
@@ -365,9 +296,7 @@ end
 function Map:draw()
 	self:_drawBackground()
 	for _, layer in ipairs(self.layers) do
-		if layer.visible then
-			layer:draw()
-		end
+		if layer.visible then layer:draw() end
 	end
 end
 
