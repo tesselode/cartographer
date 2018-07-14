@@ -303,10 +303,10 @@ end
 function cartographer.load(path)
 	local ok, chunk = pcall(love.filesystem.load, path)
 	if not ok then
-		error('Error loading map from path: ' .. tostring(chunk))
+		error('Error loading map from path: ' .. tostring(chunk), 2)
 	end
 	if not chunk then
-		error('Could not find path: ' .. path)
+		error('Could not find path: ' .. path, 2)
 	end
 	local map = chunk()
 	setmetatable(map, Map)
