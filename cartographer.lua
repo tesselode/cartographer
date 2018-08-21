@@ -27,6 +27,8 @@ local cartographer = {
 	]]
 }
 
+-- splits a path into directory, file (with filename), and just filename
+-- i really only need the directory
 -- https://stackoverflow.com/a/12191225
 local function splitPath(path)
     return string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
@@ -43,6 +45,8 @@ local function formatPath(path)
 	return path
 end
 
+-- given a grid with w items per row, return the column and row of the nth item
+-- (going from left to right, top to bottom)
 -- https://stackoverflow.com/a/9816217
 local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
