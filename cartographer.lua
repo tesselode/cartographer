@@ -34,6 +34,8 @@ local function splitPath(path)
     return string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
 end
 
+-- joins two paths together into a reasonable path that Lua can use.
+-- handles going up a directory using ..
 -- https://github.com/karai17/Simple-Tiled-Implementation/blob/master/sti/utils.lua#L5
 local function formatPath(path)
 	local npGen1, npGen2 = '[^SEP]+SEP%.%.SEP?', 'SEP+%.?SEP'
@@ -105,6 +107,8 @@ function Tileset:_getQuad(gid)
 	return quad
 end
 
+-- this metatable is applied to map.layers so that layers can be accessed
+-- by name
 local LayerList = {
 	__index = function(self, k)
 		for _, layer in ipairs(self) do
