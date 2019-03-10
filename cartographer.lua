@@ -54,6 +54,38 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
+-- this metatable is applied to map.layers so that layers can be accessed
+-- by name
+local LayerList = {
+	__index = function(self, k)
+		for _, layer in ipairs(self) do
+			if layer.name == k then return layer end
+		end
+		return rawget(self, k)
+	end,
+}
+
+local Layer = {}
+
+Layer.tilelayer = {}
+Layer.tilelayer.__index = Layer.tilelayer
+
+function Layer.tilelayer:_createSpriteBatches()
+	self._spriteBatches = {}
+	for relativeImagePath, image in pairs(self._map._images) do
+		self._spriteBatches[relativeImagePath] = love.graphics.newSpriteBatch(image)
+	end
+end
+
+function Layer.tilelayer:_init(map)
+	self._map = map
+	self:_createSpriteBatches()
+end
+
+function Layer.tilelayer:draw()
+	love.graphics.print 'hi!'
+end
+
 local Map = {}
 Map.__index = Map
 
@@ -73,14 +105,40 @@ function Map:_loadImages()
 	end
 end
 
+function Map:_initLayers()
+	for _, layer in ipairs(self.layers) do
+		setmetatable(layer, Layer[layer.type])
+		if layer.init then layer:_init(self) end
+	end
+	setmetatable(self.layers, LayerList)
+end
+
 function Map:_init(path)
 	self.dir = splitPath(path)
 	self:_loadImages()
+	self:_initLayers()
 end
 
 function Map:update(dt) end
 
-function Map:draw() end
+function Map:_drawBackground()
+	if self.backgroundcolor then
+		local r = self.backgroundcolor[1] / 255
+		local g = self.backgroundcolor[2] / 255
+		local b = self.backgroundcolor[3] / 255
+		love.graphics.setColor(r, g, b)
+		love.graphics.rectangle('fill', 0, 0,
+			self.width * self.tilewidth,
+			self.height * self.tileheight)
+	end
+end
+
+function Map:draw()
+	self:_drawBackground()
+	for _, layer in ipairs(self.layers) do
+		if layer.visible and layer.draw then layer:draw() end
+	end
+end
 
 function cartographer.load(path)
 	if not path then
