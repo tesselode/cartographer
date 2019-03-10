@@ -256,20 +256,6 @@ return {
           properties = {}
         },
         {
-          id = 6,
-          name = "",
-          type = "",
-          shape = "rectangle",
-          x = 560,
-          y = 224,
-          width = 16,
-          height = 16,
-          rotation = 0,
-          gid = 1857,
-          visible = true,
-          properties = {}
-        },
-        {
           id = 7,
           name = "",
           type = "",

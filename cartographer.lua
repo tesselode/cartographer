@@ -77,7 +77,8 @@ function Tileset:_getTileImageAndQuad(gid)
 	local tile = self:_getTile(gid)
 	if tile and tile.image then
 		local image = self._map._images[tile.image]
-		local quad = love.graphics.newQuad(0, 0, image:getWidth(), image:getHeight())
+		local quad = love.graphics.newQuad(0, 0, image:getWidth(), image:getHeight(),
+			image:getWidth(), image:getHeight())
 		return tile.image, quad
 	elseif self.image then
 		local image = self._map._images[self.image]
@@ -106,15 +107,32 @@ local LayerList = {
 
 local Layer = {}
 
-Layer.tilelayer = {}
-Layer.tilelayer.__index = Layer.tilelayer
+Layer.drawable = {}
+Layer.drawable.__index = Layer.drawable
 
-function Layer.tilelayer:_createSpriteBatches()
+function Layer.drawable:_createSpriteBatches()
 	self._spriteBatches = {}
 	for relativeImagePath, image in pairs(self._map._images) do
 		self._spriteBatches[relativeImagePath] = love.graphics.newSpriteBatch(image)
 	end
 end
+
+function Layer.drawable:_fillSpriteBatches() end
+
+function Layer.drawable:_init(map)
+	self._map = map
+	self:_createSpriteBatches()
+	self:_fillSpriteBatches()
+end
+
+function Layer.drawable:draw()
+	for _, spriteBatch in pairs(self._spriteBatches) do
+		love.graphics.draw(spriteBatch)
+	end
+end
+
+Layer.tilelayer = setmetatable({}, {__index = Layer.drawable})
+Layer.tilelayer.__index = Layer.tilelayer
 
 function Layer.tilelayer:_getTilePosition(n)
 	local x, y = getCoordinates(n, self.width)
@@ -133,15 +151,16 @@ function Layer.tilelayer:_fillSpriteBatches()
 	end
 end
 
-function Layer.tilelayer:_init(map)
-	self._map = map
-	self:_createSpriteBatches()
-	self:_fillSpriteBatches()
-end
+Layer.objectgroup = setmetatable({}, {__index = Layer.drawable})
+Layer.objectgroup.__index = Layer.objectgroup
 
-function Layer.tilelayer:draw()
-	for _, spriteBatch in pairs(self._spriteBatches) do
-		love.graphics.draw(spriteBatch)
+function Layer.objectgroup:_fillSpriteBatches()
+	for _, object in ipairs(self.objects) do
+		if object.gid and object.visible then
+			local tileset = self._map:_getTileset(object.gid)
+			local image, quad = tileset:_getTileImageAndQuad(object.gid)
+			self._spriteBatches[image]:add(quad, object.x, object.y - object.height)
+		end
 	end
 end
 

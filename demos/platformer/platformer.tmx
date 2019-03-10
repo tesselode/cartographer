@@ -51,7 +51,6 @@
   <object id="3" gid="6914" x="433" y="80" width="14" height="8"/>
   <object id="4" gid="1793" x="192" y="176" width="16" height="16"/>
   <object id="5" gid="1857" x="368" y="160" width="16" height="16"/>
-  <object id="6" gid="1857" x="560" y="224" width="16" height="16"/>
   <object id="7" gid="6917" x="128" y="176" width="16" height="20"/>
  </objectgroup>
 </map>
