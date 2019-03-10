@@ -73,8 +73,15 @@ function Tileset:_getTile(gid)
 	end
 end
 
-function Tileset:_getTileImageAndQuad(gid)
+function Tileset:_getTileImageAndQuad(gid, frame)
+	frame = frame or 1
 	local tile = self:_getTile(gid)
+	if tile and tile.animation then
+		local currentFrameGid = self.firstgid + tile.animation[frame].tileid
+		if currentFrameGid ~= gid then
+			return self:_getTileImageAndQuad(currentFrameGid, frame)
+		end
+	end
 	if tile and tile.image then
 		return self._map._images[tile.image]
 	elseif self.image then
@@ -107,6 +114,24 @@ local Layer = {}
 Layer.drawable = {}
 Layer.drawable.__index = Layer.drawable
 
+function Layer.drawable:_initAnimations()
+	self._animations = {}
+	for _, tileset in ipairs(self._map.tilesets) do
+		self._animations[tileset] = {}
+		for _, tile in ipairs(tileset.tiles) do
+			if tile.animation then
+				local gid = tileset.firstgid + tile.id
+				self._animations[tileset][gid] = {
+					frames = tile.animation,
+					frame = 1,
+					timer = tile.animation[1].duration,
+					sprites = {},
+				}
+			end
+		end
+	end
+end
+
 function Layer.drawable:_createSpriteBatches()
 	self._spriteBatches = {}
 	for _, tileset in ipairs(self._map.tilesets) do
@@ -121,8 +146,34 @@ function Layer.drawable:_fillSpriteBatches() end
 
 function Layer.drawable:_init(map)
 	self._map = map
+	self:_initAnimations()
 	self:_createSpriteBatches()
 	self:_fillSpriteBatches()
+end
+
+function Layer.drawable:_updateAnimations(dt)
+	for tileset, tilesetAnimations in pairs(self._animations) do
+		for gid, animation in pairs(tilesetAnimations) do
+			animation.timer = animation.timer - 1000 * dt
+			while animation.timer <= 0 do
+				animation.frame = animation.frame + 1
+				if animation.frame > #animation.frames then
+					animation.frame = 1
+				end
+				animation.timer = animation.timer + animation.frames[animation.frame].duration
+				if tileset.image then
+					local image, quad = tileset:_getTileImageAndQuad(gid, animation.frame)
+					for _, sprite in ipairs(animation.sprites) do
+						self._spriteBatches[image]:set(sprite.id, quad, sprite.x, sprite.y)
+					end
+				end
+			end
+		end
+	end
+end
+
+function Layer.drawable:update(dt)
+	self:_updateAnimations(dt)
 end
 
 function Layer.drawable:_drawSpriteBatches()
@@ -149,7 +200,15 @@ function Layer.tilelayer:_fillSpriteBatches()
 			local tileset = self._map:_getTileset(gid)
 			if tileset.image then
 				local image, quad = tileset:_getTileImageAndQuad(gid)
-				self._spriteBatches[image]:add(quad, self:_getTilePosition(n))
+				local x, y = self:_getTilePosition(n)
+				local id = self._spriteBatches[image]:add(quad, x, y)
+				if self._animations[tileset][gid] then
+					table.insert(self._animations[tileset][gid].sprites, {
+						id = id,
+						x = x,
+						y = y,
+					})
+				end
 			end
 		end
 	end
@@ -161,7 +220,11 @@ function Layer.tilelayer:draw()
 		if gid ~= 0 then
 			local tileset = self._map:_getTileset(gid)
 			if not tileset.image then
-				local image = tileset:_getTileImageAndQuad(gid)
+				local frame = 1
+				if self._animations[tileset][gid] then
+					frame = self._animations[tileset][gid].frame
+				end
+				local image = tileset:_getTileImageAndQuad(gid, frame)
 				love.graphics.draw(image, self:_getTilePosition(n))
 			end
 		end
@@ -177,7 +240,15 @@ function Layer.objectgroup:_fillSpriteBatches()
 			local tileset = self._map:_getTileset(object.gid)
 			if tileset.image then
 				local image, quad = tileset:_getTileImageAndQuad(object.gid)
-				self._spriteBatches[image]:add(quad, object.x, object.y - object.height)
+				local x, y = object.x, object.y - object.height
+				local id = self._spriteBatches[image]:add(quad, x, y)
+				if self._animations[tileset][object.gid] then
+					table.insert(self._animations[tileset][object.gid].sprites, {
+						id = id,
+						x = x,
+						y = y,
+					})
+				end
 			end
 		end
 	end
@@ -189,7 +260,11 @@ function Layer.objectgroup:draw()
 		if object.gid and object.visible then
 			local tileset = self._map:_getTileset(object.gid)
 			if not tileset.image then
-				local image = tileset:_getTileImageAndQuad(object.gid)
+				local frame = 1
+				if self._animations[tileset][object.gid] then
+					frame = self._animations[tileset][object.gid].frame
+				end
+				local image = tileset:_getTileImageAndQuad(object.gid, frame)
 				love.graphics.draw(image, object.x, object.y - object.height)
 			end
 		end
@@ -245,7 +320,11 @@ function Map:_getTileset(gid)
 	end
 end
 
-function Map:update(dt) end
+function Map:update(dt)
+	for _, layer in ipairs(self.layers) do
+		if layer.update then layer:update(dt) end
+	end
+end
 
 function Map:_drawBackground()
 	if self.backgroundcolor then
