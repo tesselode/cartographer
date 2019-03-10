@@ -76,7 +76,7 @@ end
 function Tileset:_getTileImageAndQuad(gid)
 	local tile = self:_getTile(gid)
 	if tile and tile.image then
-		return tile.image
+		return self._map._images[tile.image]
 	elseif self.image then
 		local image = self._map._images[self.image]
 		local x, y = getCoordinates(gid - self.firstgid + 1, self._tilesPerRow)
@@ -85,7 +85,7 @@ function Tileset:_getTileImageAndQuad(gid)
 			y * (self.tileheight + self.spacing),
 			self.tilewidth, self.tileheight,
 			image:getWidth(), image:getHeight())
-		return self.image, quad
+		return image, quad
 	else
 		return false
 	end
@@ -112,7 +112,7 @@ function Layer.drawable:_createSpriteBatches()
 	for _, tileset in ipairs(self._map.tilesets) do
 		if tileset.image then
 			local image = self._map._images[tileset.image]
-			self._spriteBatches[tileset.image] = love.graphics.newSpriteBatch(image)
+			self._spriteBatches[image] = love.graphics.newSpriteBatch(image)
 		end
 	end
 end
@@ -162,7 +162,7 @@ function Layer.tilelayer:draw()
 			local tileset = self._map:_getTileset(gid)
 			if not tileset.image then
 				local image = tileset:_getTileImageAndQuad(gid)
-				love.graphics.draw(self._map._images[image], self:_getTilePosition(n))
+				love.graphics.draw(image, self:_getTilePosition(n))
 			end
 		end
 	end
@@ -190,7 +190,7 @@ function Layer.objectgroup:draw()
 			local tileset = self._map:_getTileset(object.gid)
 			if not tileset.image then
 				local image = tileset:_getTileImageAndQuad(object.gid)
-				love.graphics.draw(self._map._images[image], object.x, object.y - object.height)
+				love.graphics.draw(image, object.x, object.y - object.height)
 			end
 		end
 	end
