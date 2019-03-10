@@ -54,6 +54,45 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
+local Tileset = {}
+Tileset.__index = Tileset
+
+function Tileset:_init(map)
+	self._map = map
+	if self.image then
+		local image = self._map._images[self.image]
+		self._tilesPerRow = math.floor(image:getWidth() / (self.tilewidth + self.spacing))
+	end
+end
+
+function Tileset:_getTile(gid)
+	for _, tile in ipairs(self.tiles) do
+		if self.firstgid + tile.id == gid then
+			return tile
+		end
+	end
+end
+
+function Tileset:_getTileImageAndQuad(gid)
+	local tile = self:_getTile(gid)
+	if tile and tile.image then
+		local image = self._map._images[tile.image]
+		local quad = love.graphics.newQuad(0, 0, image:getWidth(), image:getHeight())
+		return tile.image, quad
+	elseif self.image then
+		local image = self._map._images[self.image]
+		local x, y = getCoordinates(gid - self.firstgid + 1, self._tilesPerRow)
+		local quad = love.graphics.newQuad(
+			x * (self.tilewidth + self.spacing),
+			y * (self.tileheight + self.spacing),
+			self.tilewidth, self.tileheight,
+			image:getWidth(), image:getHeight())
+		return self.image, quad
+	else
+		return false
+	end
+end
+
 -- this metatable is applied to map.layers so that layers can be accessed
 -- by name
 local LayerList = {
@@ -77,13 +116,33 @@ function Layer.tilelayer:_createSpriteBatches()
 	end
 end
 
+function Layer.tilelayer:_getTilePosition(n)
+	local x, y = getCoordinates(n, self.width)
+	x, y = x * self._map.tilewidth, y * self._map.tileheight
+	x, y = x + self.offsetx, y + self.offsety
+	return x, y
+end
+
+function Layer.tilelayer:_fillSpriteBatches()
+	for n, gid in ipairs(self.data) do
+		if gid ~= 0 then
+			local tileset = self._map:_getTileset(gid)
+			local image, quad = tileset:_getTileImageAndQuad(gid)
+			self._spriteBatches[image]:add(quad, self:_getTilePosition(n))
+		end
+	end
+end
+
 function Layer.tilelayer:_init(map)
 	self._map = map
 	self:_createSpriteBatches()
+	self:_fillSpriteBatches()
 end
 
 function Layer.tilelayer:draw()
-	love.graphics.print 'hi!'
+	for _, spriteBatch in pairs(self._spriteBatches) do
+		love.graphics.draw(spriteBatch)
+	end
 end
 
 local Map = {}
@@ -105,10 +164,17 @@ function Map:_loadImages()
 	end
 end
 
+function Map:_initTilesets()
+	for _, tileset in ipairs(self.tilesets) do
+		setmetatable(tileset, Tileset)
+		tileset:_init(self)
+	end
+end
+
 function Map:_initLayers()
 	for _, layer in ipairs(self.layers) do
 		setmetatable(layer, Layer[layer.type])
-		if layer.init then layer:_init(self) end
+		if layer._init then layer:_init(self) end
 	end
 	setmetatable(self.layers, LayerList)
 end
@@ -116,7 +182,16 @@ end
 function Map:_init(path)
 	self.dir = splitPath(path)
 	self:_loadImages()
+	self:_initTilesets()
 	self:_initLayers()
+end
+
+function Map:_getTileset(gid)
+	for i = #self.tilesets, 1, -1 do
+		if gid >= self.tilesets[i].firstgid then
+			return self.tilesets[i]
+		end
+	end
 end
 
 function Map:update(dt) end
