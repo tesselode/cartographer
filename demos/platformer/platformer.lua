@@ -9,7 +9,7 @@ return {
   tilewidth = 16,
   tileheight = 16,
   nextlayerid = 4,
-  nextobjectid = 7,
+  nextobjectid = 8,
   properties = {},
   tilesets = {
     {
@@ -58,7 +58,7 @@ return {
       },
       properties = {},
       terrains = {},
-      tilecount = 3,
+      tilecount = 6,
       tiles = {
         {
           id = 0,
@@ -73,8 +73,44 @@ return {
           height = 8
         },
         {
-          id = 2,
-          image = "player.png",
+          id = 4,
+          image = "player_frame_1.png",
+          width = 16,
+          height = 20,
+          animation = {
+            {
+              tileid = 4,
+              duration = 200
+            },
+            {
+              tileid = 5,
+              duration = 200
+            },
+            {
+              tileid = 6,
+              duration = 200
+            },
+            {
+              tileid = 7,
+              duration = 200
+            }
+          }
+        },
+        {
+          id = 5,
+          image = "player_frame_2.png",
+          width = 16,
+          height = 20
+        },
+        {
+          id = 6,
+          image = "player_frame_3.png",
+          width = 16,
+          height = 20
+        },
+        {
+          id = 7,
+          image = "player_frame_4.png",
           width = 16,
           height = 20
         }
@@ -164,20 +200,6 @@ return {
       properties = {},
       objects = {
         {
-          id = 1,
-          name = "",
-          type = "",
-          shape = "rectangle",
-          x = 112,
-          y = 176,
-          width = 16,
-          height = 20,
-          rotation = 0,
-          gid = 6915,
-          visible = true,
-          properties = {}
-        },
-        {
           id = 2,
           name = "",
           type = "",
@@ -244,6 +266,20 @@ return {
           height = 16,
           rotation = 0,
           gid = 1857,
+          visible = true,
+          properties = {}
+        },
+        {
+          id = 7,
+          name = "",
+          type = "",
+          shape = "rectangle",
+          x = 128,
+          y = 176,
+          width = 16,
+          height = 20,
+          rotation = 0,
+          gid = 6917,
           visible = true,
           properties = {}
         }
