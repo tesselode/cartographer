@@ -1,3 +1,6 @@
+-- todo:
+-- - reimplement infinite map support
+
 local cartographer = {
 	_VERSION = 'Cartographer',
 	_DESCRIPTION = 'Simple Tiled map loading for LÖVE.',
@@ -54,6 +57,7 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
+-- Represents a tileset in an exported Tiled map.
 local Tileset = {}
 Tileset.__index = Tileset
 
@@ -61,10 +65,12 @@ function Tileset:_init(map)
 	self._map = map
 	if self.image then
 		local image = self._map._images[self.image]
+		-- save the number of tiles per row so we don't have to calculate it later
 		self._tilesPerRow = math.floor(image:getWidth() / (self.tilewidth + self.spacing))
 	end
 end
 
+-- Gets the tile with the specified global id.
 function Tileset:_getTile(gid)
 	for _, tile in ipairs(self.tiles) do
 		if self.firstgid + tile.id == gid then
@@ -73,18 +79,31 @@ function Tileset:_getTile(gid)
 	end
 end
 
+--[[
+	Gets the image and optionally quad of the tile with the specified global id.
+	If the tileset is a collection of images, then each tile has its own image,
+	so it'll just return the image. If the tileset is one image with a grid
+	that defines the individual tiles, then it'll also return the quad for the
+	specific tile.
+
+	If the tile is animated, then it'll return the correct tile for the current
+	animation frame (defaults to 1).
+]]
 function Tileset:_getTileImageAndQuad(gid, frame)
 	frame = frame or 1
 	local tile = self:_getTile(gid)
 	if tile and tile.animation then
+		-- get the appropriate frame for animated tiles
 		local currentFrameGid = self.firstgid + tile.animation[frame].tileid
 		if currentFrameGid ~= gid then
 			return self:_getTileImageAndQuad(currentFrameGid, frame)
 		end
 	end
 	if tile and tile.image then
+		-- if each tile has its own image, just return that image
 		return self._map._images[tile.image]
 	elseif self.image then
+		-- return the tileset image and the quad representing the specific tile
 		local image = self._map._images[self.image]
 		local x, y = getCoordinates(gid - self.firstgid + 1, self._tilesPerRow)
 		local quad = love.graphics.newQuad(
@@ -111,9 +130,14 @@ local LayerList = {
 
 local Layer = {}
 
+--[[
+	Item layers aren't a layer type in Tiled, they're an abstraction
+	for any layer type that can hold tiles (tile layers and object layers).
+]]
 Layer.itemlayer = {}
 Layer.itemlayer.__index = Layer.itemlayer
 
+-- Starts timers for each animated tile in the map.
 function Layer.itemlayer:_initAnimations()
 	self._animations = {}
 	for _, tileset in ipairs(self._map.tilesets) do
@@ -132,6 +156,7 @@ function Layer.itemlayer:_initAnimations()
 	end
 end
 
+-- Creates sprite batches for each tileset that uses one image for all the tiles.
 function Layer.itemlayer:_createSpriteBatches()
 	self._spriteBatches = {}
 	for _, tileset in ipairs(self._map.tilesets) do
@@ -142,9 +167,17 @@ function Layer.itemlayer:_createSpriteBatches()
 	end
 end
 
+-- Gets the number of items to draw. This is a placeholder, since the behavior
+-- is specific to tile and object layers.
 function Layer.itemlayer:_getNumberOfItems() end
+
+-- Gets the global id, x position, and y position of a tile.
+-- This is a placeholder, since the behavior is specific to tile and object layers.
+-- Can return false if there's no item to draw at this index.
 function Layer.itemlayer:_getItem(i) end
 
+-- Renders the layer to sprite batches. Only tiles that are part of a tileset
+-- that uses one image for every tile are batched.
 function Layer.itemlayer:_fillSpriteBatches()
 	for i = 1, self:_getNumberOfItems() do
 		local gid, x, y = self:_getItem(i)
@@ -153,6 +186,8 @@ function Layer.itemlayer:_fillSpriteBatches()
 			if tileset.image then
 				local image, quad = tileset:_getTileImageAndQuad(gid)
 				local id = self._spriteBatches[image]:add(quad, x, y)
+				-- save information about sprites that will be affected by animations,
+				-- since we'll have to update them later
 				if self._animations[tileset][gid] then
 					table.insert(self._animations[tileset][gid].sprites, {
 						id = id,
@@ -172,6 +207,7 @@ function Layer.itemlayer:_init(map)
 	self:_fillSpriteBatches()
 end
 
+-- Updates the animation timers and changes sprites in the sprite batches as needed.
 function Layer.itemlayer:_updateAnimations(dt)
 	for tileset, tilesetAnimations in pairs(self._animations) do
 		for gid, animation in pairs(tilesetAnimations) do
@@ -200,9 +236,11 @@ end
 function Layer.itemlayer:draw()
 	love.graphics.push()
 	love.graphics.translate(self.offsetx, self.offsety)
+	-- draw the sprite batches
 	for _, spriteBatch in pairs(self._spriteBatches) do
 		love.graphics.draw(spriteBatch)
 	end
+	-- draw the items that aren't part of a sprite batch
 	for i = 1, self:_getNumberOfItems() do
 		local gid, x, y = self:_getItem(i)
 		if gid and x and y then
@@ -220,9 +258,11 @@ function Layer.itemlayer:draw()
 	love.graphics.pop()
 end
 
+-- Represents a tile layer in an exported Tiled map.
 Layer.tilelayer = setmetatable({}, {__index = Layer.itemlayer})
 Layer.tilelayer.__index = Layer.tilelayer
 
+-- Gets the x and y position of the nth tile in the layer's tile data.
 function Layer.tilelayer:_getTilePosition(n)
 	local x, y = getCoordinates(n, self.width)
 	x, y = x * self._map.tilewidth, y * self._map.tileheight
@@ -243,6 +283,7 @@ function Layer.tilelayer:_getItem(i)
 	return false
 end
 
+-- Represents an object layer in an exported Tiled map.
 Layer.objectgroup = setmetatable({}, {__index = Layer.itemlayer})
 Layer.objectgroup.__index = Layer.objectgroup
 
@@ -255,6 +296,7 @@ function Layer.objectgroup:_getItem(i)
 	return object.gid, object.x, object.y - object.height
 end
 
+-- Represents an image layer in an exported Tiled map.
 Layer.imagelayer = {}
 Layer.imagelayer.__index = Layer.imagelayer
 
@@ -266,6 +308,7 @@ function Layer.imagelayer:draw()
 	love.graphics.draw(self._map._images[self.image], self.offsetx, self.offsety)
 end
 
+-- Represents a layer group in an exported Tiled map.
 Layer.group = {}
 Layer.group.__index = Layer.group
 
@@ -292,15 +335,20 @@ function Layer.group:draw()
 	love.graphics.pop()
 end
 
+-- Represents an exported Tiled map.
 local Map = {}
 Map.__index = Map
 
+-- Loads an image if it hasn't already been loaded yet.
+-- Images are stored in map._images, and the key is the relative
+-- path to the image.
 function Map:_loadImage(relativeImagePath)
 	if self._images[relativeImagePath] then return end
 	local imagePath = formatPath(self.dir .. relativeImagePath)
 	self._images[relativeImagePath] = love.graphics.newImage(imagePath)
 end
 
+-- Loads all of the images used by the map.
 function Map:_loadImages()
 	self._images = {}
 	for _, tileset in ipairs(self.tilesets) do
@@ -338,6 +386,7 @@ function Map:_init(path)
 	self:_initLayers()
 end
 
+-- Gets the tileset the tile with the specified global id belongs to.
 function Map:_getTileset(gid)
 	for i = #self.tilesets, 1, -1 do
 		if gid >= self.tilesets[i].firstgid then
@@ -371,6 +420,7 @@ function Map:draw()
 	end
 end
 
+-- Loads a Tiled map from a lua file.
 function cartographer.load(path)
 	if not path then
 		error('No map path provided', 2)
