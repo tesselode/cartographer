@@ -182,8 +182,8 @@ function Layer.tilelayer:_updateAnimatedTiles()
 	for tileset, spriteBatch in pairs(self._spriteBatches) do
 		for gid, animation in pairs(tileset._animations) do
 			if self._animatedTiles[tileset][gid] and animation.changed then
+				local q = tileset:_getQuad(gid)
 				for _, tile in pairs(self._animatedTiles[tileset][gid]) do
-					local q = tileset:_getQuad(gid)
 					spriteBatch:set(tile.sprite, q, tile.x, tile.y)
 				end
 			end
