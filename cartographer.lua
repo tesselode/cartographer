@@ -271,6 +271,29 @@ function Layer.objectgroup:draw()
 	end
 end
 
+Layer.group = {}
+Layer.group.__index = Layer.group
+
+function Layer.group:_init(map)
+	for _, layer in ipairs(self.layers) do
+		setmetatable(layer, Layer[layer.type])
+		layer:_init(map)
+	end
+	setmetatable(self.layers, LayerList)
+end
+
+function Layer.group:_update(dt)
+	for _, layer in ipairs(self.layers) do
+		if layer.update then layer:update(dt) end
+	end
+end
+
+function Layer.group:draw()
+	for _, layer in ipairs(self.layers) do
+		if layer.visible and layer.draw then layer:draw() end
+	end
+end
+
 local Map = {}
 Map.__index = Map
 
