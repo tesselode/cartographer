@@ -1,11 +1,11 @@
 local cartographer = {
-	_VERSION = 'Cartographer',
+	_VERSION = 'Cartographer v2.0',
 	_DESCRIPTION = 'Simple Tiled map loading for LÖVE.',
 	_URL = 'https://github.com/tesselode/cartographer',
 	_LICENSE = [[
 		MIT License
 
-		Copyright (c) 2018 Andrew Minnich
+		Copyright (c) 2019 Andrew Minnich
 
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
