@@ -111,10 +111,10 @@ local LayerList = {
 
 local Layer = {}
 
-Layer.drawable = {}
-Layer.drawable.__index = Layer.drawable
+Layer.itemlayer = {}
+Layer.itemlayer.__index = Layer.itemlayer
 
-function Layer.drawable:_initAnimations()
+function Layer.itemlayer:_initAnimations()
 	self._animations = {}
 	for _, tileset in ipairs(self._map.tilesets) do
 		self._animations[tileset] = {}
@@ -132,7 +132,7 @@ function Layer.drawable:_initAnimations()
 	end
 end
 
-function Layer.drawable:_createSpriteBatches()
+function Layer.itemlayer:_createSpriteBatches()
 	self._spriteBatches = {}
 	for _, tileset in ipairs(self._map.tilesets) do
 		if tileset.image then
@@ -142,16 +142,37 @@ function Layer.drawable:_createSpriteBatches()
 	end
 end
 
-function Layer.drawable:_fillSpriteBatches() end
+function Layer.itemlayer:_getNumberOfItems() end
+function Layer.itemlayer:_getItem(i) end
 
-function Layer.drawable:_init(map)
+function Layer.itemlayer:_fillSpriteBatches()
+	for i = 1, self:_getNumberOfItems() do
+		local gid, x, y = self:_getItem(i)
+		if gid and x and y then
+			local tileset = self._map:_getTileset(gid)
+			if tileset.image then
+				local image, quad = tileset:_getTileImageAndQuad(gid)
+				local id = self._spriteBatches[image]:add(quad, x, y)
+				if self._animations[tileset][gid] then
+					table.insert(self._animations[tileset][gid].sprites, {
+						id = id,
+						x = x,
+						y = y,
+					})
+				end
+			end
+		end
+	end
+end
+
+function Layer.itemlayer:_init(map)
 	self._map = map
 	self:_initAnimations()
 	self:_createSpriteBatches()
 	self:_fillSpriteBatches()
 end
 
-function Layer.drawable:_updateAnimations(dt)
+function Layer.itemlayer:_updateAnimations(dt)
 	for tileset, tilesetAnimations in pairs(self._animations) do
 		for gid, animation in pairs(tilesetAnimations) do
 			animation.timer = animation.timer - 1000 * dt
@@ -172,19 +193,34 @@ function Layer.drawable:_updateAnimations(dt)
 	end
 end
 
-function Layer.drawable:update(dt)
+function Layer.itemlayer:update(dt)
 	self:_updateAnimations(dt)
 end
 
-function Layer.drawable:_drawSpriteBatches()
+function Layer.itemlayer:draw()
+	love.graphics.push()
+	love.graphics.translate(self.offsetx, self.offsety)
 	for _, spriteBatch in pairs(self._spriteBatches) do
 		love.graphics.draw(spriteBatch)
 	end
+	for i = 1, self:_getNumberOfItems() do
+		local gid, x, y = self:_getItem(i)
+		if gid and x and y then
+			local tileset = self._map:_getTileset(gid)
+			if not tileset.image then
+				local frame = 1
+				if self._animations[tileset][gid] then
+					frame = self._animations[tileset][gid].frame
+				end
+				local image = tileset:_getTileImageAndQuad(gid, frame)
+				love.graphics.draw(image, x, y)
+			end
+		end
+	end
+	love.graphics.pop()
 end
 
-function Layer.drawable:draw() end
-
-Layer.tilelayer = setmetatable({}, {__index = Layer.drawable})
+Layer.tilelayer = setmetatable({}, {__index = Layer.itemlayer})
 Layer.tilelayer.__index = Layer.tilelayer
 
 function Layer.tilelayer:_getTilePosition(n)
@@ -194,87 +230,29 @@ function Layer.tilelayer:_getTilePosition(n)
 	return x, y
 end
 
-function Layer.tilelayer:_fillSpriteBatches()
-	for n, gid in ipairs(self.data) do
-		if gid ~= 0 then
-			local tileset = self._map:_getTileset(gid)
-			if tileset.image then
-				local image, quad = tileset:_getTileImageAndQuad(gid)
-				local x, y = self:_getTilePosition(n)
-				local id = self._spriteBatches[image]:add(quad, x, y)
-				if self._animations[tileset][gid] then
-					table.insert(self._animations[tileset][gid].sprites, {
-						id = id,
-						x = x,
-						y = y,
-					})
-				end
-			end
-		end
-	end
+function Layer.tilelayer:_getNumberOfItems()
+	return #self.data
 end
 
-function Layer.tilelayer:draw()
-	love.graphics.push()
-	love.graphics.translate(self.offsetx, self.offsety)
-	self:_drawSpriteBatches()
-	for n, gid in ipairs(self.data) do
-		if gid ~= 0 then
-			local tileset = self._map:_getTileset(gid)
-			if not tileset.image then
-				local frame = 1
-				if self._animations[tileset][gid] then
-					frame = self._animations[tileset][gid].frame
-				end
-				local image = tileset:_getTileImageAndQuad(gid, frame)
-				love.graphics.draw(image, self:_getTilePosition(n))
-			end
-		end
+function Layer.tilelayer:_getItem(i)
+	local gid = self.data[i]
+	if gid ~= 0 then
+		local x, y = self:_getTilePosition(i)
+		return gid, x, y
 	end
-	love.graphics.pop()
+	return false
 end
 
-Layer.objectgroup = setmetatable({}, {__index = Layer.drawable})
+Layer.objectgroup = setmetatable({}, {__index = Layer.itemlayer})
 Layer.objectgroup.__index = Layer.objectgroup
 
-function Layer.objectgroup:_fillSpriteBatches()
-	for _, object in ipairs(self.objects) do
-		if object.gid and object.visible then
-			local tileset = self._map:_getTileset(object.gid)
-			if tileset.image then
-				local image, quad = tileset:_getTileImageAndQuad(object.gid)
-				local x, y = object.x, object.y - object.height
-				local id = self._spriteBatches[image]:add(quad, x, y)
-				if self._animations[tileset][object.gid] then
-					table.insert(self._animations[tileset][object.gid].sprites, {
-						id = id,
-						x = x,
-						y = y,
-					})
-				end
-			end
-		end
-	end
+function Layer.objectgroup:_getNumberOfItems()
+	return #self.objects
 end
 
-function Layer.objectgroup:draw()
-	love.graphics.push()
-	love.graphics.translate(self.offsetx, self.offsety)
-	self:_drawSpriteBatches()
-	for _, object in ipairs(self.objects) do
-		if object.gid and object.visible then
-			local tileset = self._map:_getTileset(object.gid)
-			if not tileset.image then
-				local frame = 1
-				if self._animations[tileset][object.gid] then
-					frame = self._animations[tileset][object.gid].frame
-				end
-				local image = tileset:_getTileImageAndQuad(object.gid, frame)
-				love.graphics.draw(image, object.x, object.y - object.height)
-			end
-		end
-	end
-	love.graphics.pop()
+function Layer.objectgroup:_getItem(i)
+	local object = self.objects[i]
+	return object.gid, object.x, object.y - object.height
 end
 
 Layer.imagelayer = {}
