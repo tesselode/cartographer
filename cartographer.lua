@@ -272,6 +272,7 @@ function Layer.tilelayer:_getTilePosition(n, width, offsetX, offsetY)
 end
 
 function Layer.tilelayer:_getNumberOfItems()
+	-- for infinite maps, get the total number of items split up among all the chunks
 	if self.chunks then
 		local items = 0
 		for _, chunk in ipairs(self.chunks) do
@@ -283,6 +284,8 @@ function Layer.tilelayer:_getNumberOfItems()
 end
 
 function Layer.tilelayer:_getItem(i)
+	-- for infinite maps, treat all the chunk data like one big array
+	-- and use chunk widths and offsets
 	if self.chunks then
 		for _, chunk in ipairs(self.chunks) do
 			if i <= #chunk.data then
