@@ -271,6 +271,17 @@ function Layer.objectgroup:draw()
 	end
 end
 
+Layer.imagelayer = {}
+Layer.imagelayer.__index = Layer.imagelayer
+
+function Layer.imagelayer:_init(map)
+	self._map = map
+end
+
+function Layer.imagelayer:draw()
+	love.graphics.draw(self._map._images[self.image], self.offsetx, self.offsety)
+end
+
 Layer.group = {}
 Layer.group.__index = Layer.group
 
@@ -309,6 +320,11 @@ function Map:_loadImages()
 		if tileset.image then self:_loadImage(tileset.image) end
 		for _, tile in ipairs(tileset.tiles) do
 			if tile.image then self:_loadImage(tile.image) end
+		end
+	end
+	for _, layer in ipairs(self.layers) do
+		if layer.type == 'imagelayer' then
+			self:_loadImage(layer.image)
 		end
 	end
 end

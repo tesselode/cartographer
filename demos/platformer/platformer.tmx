@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="32" height="18" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="8">
+<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="32" height="18" tilewidth="16" tileheight="16" infinite="0" nextlayerid="6" nextobjectid="8">
  <tileset firstgid="1" source="tiles.tsx"/>
  <tileset firstgid="6913" source="objects.tsx"/>
+ <imagelayer id="5" name="background" offsetx="48" offsety="112">
+  <image source="background.png" width="256" height="128"/>
+ </imagelayer>
  <group id="4" name="terrain">
   <layer id="1" name="terrainMain" width="32" height="18">
    <data encoding="csv">

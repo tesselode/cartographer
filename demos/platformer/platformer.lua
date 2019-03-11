@@ -8,7 +8,7 @@ return {
   height = 18,
   tilewidth = 16,
   tileheight = 16,
-  nextlayerid = 5,
+  nextlayerid = 6,
   nextobjectid = 8,
   properties = {},
   tilesets = {
@@ -118,6 +118,17 @@ return {
     }
   },
   layers = {
+    {
+      type = "imagelayer",
+      id = 5,
+      name = "background",
+      visible = true,
+      opacity = 1,
+      offsetx = 48,
+      offsety = 112,
+      image = "background.png",
+      properties = {}
+    },
     {
       type = "group",
       id = 4,
