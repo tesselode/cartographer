@@ -192,6 +192,12 @@ function Layer.itemlayer:_fillSpriteBatches()
 						y = y,
 					})
 				end
+			else
+				table.insert(self._unbatchedItems, {
+					gid = gid,
+					x = x,
+					y = y,
+				})
 			end
 		end
 	end
@@ -199,6 +205,7 @@ end
 
 function Layer.itemlayer:_init(map)
 	self._map = map
+	self._unbatchedItems = {}
 	self:_initAnimations()
 	self:_createSpriteBatches()
 	self:_fillSpriteBatches()
@@ -238,19 +245,14 @@ function Layer.itemlayer:draw()
 		love.graphics.draw(spriteBatch)
 	end
 	-- draw the items that aren't part of a sprite batch
-	for i = 1, self:_getNumberOfItems() do
-		local gid, x, y = self:_getItem(i)
-		if gid and x and y then
-			local tileset = self._map:_getTileset(gid)
-			if not tileset.image then
-				local frame = 1
-				if self._animations[tileset][gid] then
-					frame = self._animations[tileset][gid].frame
-				end
-				local image = tileset:_getTileImageAndQuad(gid, frame)
-				love.graphics.draw(image, x, y)
-			end
+	for _, item in ipairs(self._unbatchedItems) do
+		local tileset = self._map:_getTileset(item.gid)
+		local frame = 1
+		if self._animations[tileset][item.gid] then
+			frame = self._animations[tileset][item.gid].frame
 		end
+		local image = tileset:_getTileImageAndQuad(item.gid, frame)
+		love.graphics.draw(image, item.x, item.y)
 	end
 	love.graphics.pop()
 end
