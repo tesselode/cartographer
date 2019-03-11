@@ -215,6 +215,8 @@ function Layer.tilelayer:_fillSpriteBatches()
 end
 
 function Layer.tilelayer:draw()
+	love.graphics.push()
+	love.graphics.translate(self.offsetx, self.offsety)
 	self:_drawSpriteBatches()
 	for n, gid in ipairs(self.data) do
 		if gid ~= 0 then
@@ -229,6 +231,7 @@ function Layer.tilelayer:draw()
 			end
 		end
 	end
+	love.graphics.pop()
 end
 
 Layer.objectgroup = setmetatable({}, {__index = Layer.drawable})
@@ -255,6 +258,8 @@ function Layer.objectgroup:_fillSpriteBatches()
 end
 
 function Layer.objectgroup:draw()
+	love.graphics.push()
+	love.graphics.translate(self.offsetx, self.offsety)
 	self:_drawSpriteBatches()
 	for _, object in ipairs(self.objects) do
 		if object.gid and object.visible then
@@ -269,6 +274,7 @@ function Layer.objectgroup:draw()
 			end
 		end
 	end
+	love.graphics.pop()
 end
 
 Layer.imagelayer = {}
@@ -300,9 +306,12 @@ function Layer.group:_update(dt)
 end
 
 function Layer.group:draw()
+	love.graphics.push()
+	love.graphics.translate(self.offsetx, self.offsety)
 	for _, layer in ipairs(self.layers) do
 		if layer.visible and layer.draw then layer:draw() end
 	end
+	love.graphics.pop()
 end
 
 local Map = {}
