@@ -1,6 +1,3 @@
--- todo:
--- - reimplement infinite map support
-
 local cartographer = {
 	_VERSION = 'Cartographer',
 	_DESCRIPTION = 'Simple Tiled map loading for LÖVE.',
@@ -263,18 +260,42 @@ Layer.tilelayer = setmetatable({}, {__index = Layer.itemlayer})
 Layer.tilelayer.__index = Layer.tilelayer
 
 -- Gets the x and y position of the nth tile in the layer's tile data.
-function Layer.tilelayer:_getTilePosition(n)
-	local x, y = getCoordinates(n, self.width)
+function Layer.tilelayer:_getTilePosition(n, width, offsetX, offsetY)
+	width = width or self.width
+	offsetX = offsetX or 0
+	offsetY = offsetY or 0
+	local x, y = getCoordinates(n, width)
+	x, y = x + offsetX, y + offsetY
 	x, y = x * self._map.tilewidth, y * self._map.tileheight
 	x, y = x + self.offsetx, y + self.offsety
 	return x, y
 end
 
 function Layer.tilelayer:_getNumberOfItems()
+	if self.chunks then
+		local items = 0
+		for _, chunk in ipairs(self.chunks) do
+			items = items + #chunk.data
+		end
+		return items
+	end
 	return #self.data
 end
 
 function Layer.tilelayer:_getItem(i)
+	if self.chunks then
+		for _, chunk in ipairs(self.chunks) do
+			if i <= #chunk.data then
+				local gid = chunk.data[i]
+				if gid ~= 0 then
+					local x, y = self:_getTilePosition(i, chunk.width, chunk.x, chunk.y)
+					return gid, x, y
+				end
+				return false
+			end
+			i = i - #chunk.data
+		end
+	end
 	local gid = self.data[i]
 	if gid ~= 0 then
 		local x, y = self:_getTilePosition(i)
