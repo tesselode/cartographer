@@ -128,8 +128,11 @@ local LayerList = {
 local Layer = {}
 
 --[[
-	Item layers aren't a layer type in Tiled, they're an abstraction
-	for any layer type that can hold tiles (tile layers and object layers).
+	Represents any layer type that can contain tiles
+	(currently tile layers and object layers).
+	There's no layer type in Tiled called "item layers",
+	it's just a parent class to share code between
+	tile layers and object layers.
 ]]
 Layer.itemlayer = {}
 Layer.itemlayer.__index = Layer.itemlayer
@@ -153,7 +156,7 @@ function Layer.itemlayer:_initAnimations()
 	end
 end
 
--- Creates sprite batches for each tileset that uses one image for all the tiles.
+-- Creates sprite batches for each single-image tileset.
 function Layer.itemlayer:_createSpriteBatches()
 	self._spriteBatches = {}
 	for _, tileset in ipairs(self._map.tilesets) do
@@ -173,8 +176,8 @@ function Layer.itemlayer:_getNumberOfItems() end
 -- Can return false if there's no item to draw at this index.
 function Layer.itemlayer:_getItem(i) end
 
--- Renders the layer to sprite batches. Only tiles that are part of a tileset
--- that uses one image for every tile are batched.
+-- Renders the layer to sprite batches. Only tiles that are part
+-- of a single-image tileset are batched.
 function Layer.itemlayer:_fillSpriteBatches()
 	for i = 1, self:_getNumberOfItems() do
 		local gid, x, y = self:_getItem(i)
@@ -193,6 +196,8 @@ function Layer.itemlayer:_fillSpriteBatches()
 					})
 				end
 			else
+				-- remember which items aren't part of a sprite batch
+				-- so we can iterate through them in layer.draw
 				table.insert(self._unbatchedItems, {
 					gid = gid,
 					x = x,
@@ -215,15 +220,24 @@ end
 function Layer.itemlayer:_updateAnimations(dt)
 	for tileset, tilesetAnimations in pairs(self._animations) do
 		for gid, animation in pairs(tilesetAnimations) do
+			-- decrement the animation timer
 			animation.timer = animation.timer - 1000 * dt
 			while animation.timer <= 0 do
+				-- move to then next frame of animation
 				animation.frame = animation.frame + 1
 				if animation.frame > #animation.frames then
 					animation.frame = 1
 				end
+				-- increment the animation timer by the duration of the new frame
 				animation.timer = animation.timer + animation.frames[animation.frame].duration
+				-- update sprites
 				if tileset.image then
 					local image, quad = tileset:_getTileImageAndQuad(gid, animation.frame)
+					--[[
+						in _fillSpriteBatches we save the id, x position, and y position of sprites
+						in the sprite batch that need to be updated because of animations.
+						here we iterate through them and change the quad.
+					]]
 					for _, sprite in ipairs(animation.sprites) do
 						self._spriteBatches[image]:set(sprite.id, quad, sprite.x, sprite.y)
 					end
@@ -282,12 +296,16 @@ function Layer.tilelayer:_getNumberOfItems()
 		end
 		return items
 	end
+	-- otherwise, just get the length of the data
 	return #self.data
 end
 
 function Layer.tilelayer:_getItem(i)
-	-- for infinite maps, treat all the chunk data like one big array
-	-- and use chunk widths and offsets
+	--[[
+		for infinite maps, treat all the chunk data like one big array
+		each chunk has its own row width and x/y offset, which we factor
+		into the position of each sprite on the screen
+	]]
 	if self.chunks then
 		for _, chunk in ipairs(self.chunks) do
 			if i <= #chunk.data then
@@ -319,6 +337,7 @@ end
 
 function Layer.objectgroup:_getItem(i)
 	local object = self.objects[i]
+	-- tile objects are anchored at the bottom
 	return object.gid, object.x, object.y - object.height
 end
 
