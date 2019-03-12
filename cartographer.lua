@@ -446,7 +446,7 @@ function Map:update(dt)
 	end
 end
 
-function Map:_drawBackground()
+function Map:drawBackground()
 	if self.backgroundcolor then
 		local r = self.backgroundcolor[1] / 255
 		local g = self.backgroundcolor[2] / 255
@@ -459,7 +459,7 @@ function Map:_drawBackground()
 end
 
 function Map:draw()
-	self:_drawBackground()
+	self:drawBackground()
 	for _, layer in ipairs(self.layers) do
 		if layer.visible and layer.draw then layer:draw() end
 	end

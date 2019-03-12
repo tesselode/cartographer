@@ -21,6 +21,11 @@ Loads a Tiled map exported as a Lua file from the specified `path`. The returned
 map:draw()
 ```
 
+### Drawing just the map's background color
+```lua
+map:drawBackground()
+```
+
 ### Updating the map
 ```lua
 map:update(dt)
@@ -44,13 +49,14 @@ map.layers[name]:draw()
 
 ## Tiled map feature support
 Things that are supported:
-- Drawing tile layers
+- Drawing CSV-formatted tile layers
 - Drawing tile objects
 - Animated tiles
 - Layer offsets
 - Infinite maps
 
 Things that aren't supported:
+- Drawing Base64 tile layers
 - Non-orthogonal maps
 - Changing map data after loading it (you can do this, but the draw functions may not reflect the changes)
 
