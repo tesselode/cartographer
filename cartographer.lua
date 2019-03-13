@@ -440,6 +440,17 @@ function Map:_getTileset(gid)
 	end
 end
 
+-- Gets the tile with the specified global id.
+function Map:getTile(gid)
+	return self:_getTileset(gid):_getTile(gid)
+end
+
+-- Gets the value of the specified property on the specified tile, if it exists.
+function Map:getTileProperty(gid, property)
+	local tile = self:getTile(gid)
+	return tile and tile.properties and tile.properties[property] or false
+end
+
 function Map:update(dt)
 	for _, layer in ipairs(self.layers) do
 		if layer.update then layer:update(dt) end
