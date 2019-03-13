@@ -47,6 +47,12 @@ map.layers[name]:update(dt)
 map.layers[name]:draw()
 ```
 
+### Getting tile properties
+```lua
+map:getTileProperty(gid, propertyName)
+```
+Gets the value of the property called `propertyName` on the tile with the global id `gid`, if it exists.
+
 ## Tiled map feature support
 Things that are supported:
 - Drawing CSV-formatted tile layers
