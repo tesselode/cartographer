@@ -445,6 +445,12 @@ function Map:_getTile(gid)
 	return self:_getTileset(gid):_getTile(gid)
 end
 
+-- Gets the type of the specified tile, if it exists.
+function Map:getTileType(gid)
+	local tile = self:_getTile(gid)
+	return tile and tile.type
+end
+
 -- Gets the value of the specified property on the specified tile, if it exists.
 function Map:getTileProperty(gid, propertyName)
 	local tile = self:_getTile(gid)
