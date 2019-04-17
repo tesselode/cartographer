@@ -67,15 +67,6 @@ function Tileset:_init(map)
 	end
 end
 
--- Gets the tile with the specified global id.
-function Tileset:_getTile(gid)
-	for _, tile in ipairs(self.tiles) do
-		if self.firstgid + tile.id == gid then
-			return tile
-		end
-	end
-end
-
 --[[
 	Gets the image and optionally quad of the tile with the specified global id.
 	If the tileset is a collection of images, then each tile has its own image,
@@ -88,7 +79,7 @@ end
 ]]
 function Tileset:_getTileImageAndQuad(gid, frame)
 	frame = frame or 1
-	local tile = self:_getTile(gid)
+	local tile = self:getTile(gid)
 	if tile and tile.animation then
 		-- get the appropriate frame for animated tiles
 		local currentFrameGid = self.firstgid + tile.animation[frame].tileid
@@ -111,6 +102,15 @@ function Tileset:_getTileImageAndQuad(gid, frame)
 		return image, quad
 	else
 		return false
+	end
+end
+
+-- Gets the tile with the specified global id.
+function Tileset:getTile(gid)
+	for _, tile in ipairs(self.tiles) do
+		if self.firstgid + tile.id == gid then
+			return tile
+		end
 	end
 end
 
@@ -182,7 +182,7 @@ function Layer.itemlayer:_fillSpriteBatches()
 	for i = 1, self:_getNumberOfItems() do
 		local gid, x, y = self:_getItem(i)
 		if gid and x and y then
-			local tileset = self._map:_getTileset(gid)
+			local tileset = self._map:getTileset(gid)
 			if tileset.image then
 				local image, quad = tileset:_getTileImageAndQuad(gid)
 				local id = self._spriteBatches[image]:add(quad, x, y)
@@ -260,7 +260,7 @@ function Layer.itemlayer:draw()
 	end
 	-- draw the items that aren't part of a sprite batch
 	for _, item in ipairs(self._unbatchedItems) do
-		local tileset = self._map:_getTileset(item.gid)
+		local tileset = self._map:getTileset(item.gid)
 		local frame = 1
 		if self._animations[tileset][item.gid] then
 			frame = self._animations[tileset][item.gid].frame
@@ -432,7 +432,7 @@ function Map:_init(path)
 end
 
 -- Gets the tileset the tile with the specified global id belongs to.
-function Map:_getTileset(gid)
+function Map:getTileset(gid)
 	for i = #self.tilesets, 1, -1 do
 		if gid >= self.tilesets[i].firstgid then
 			return self.tilesets[i]
@@ -441,19 +441,19 @@ function Map:_getTileset(gid)
 end
 
 -- Gets the tile with the specified global id.
-function Map:_getTile(gid)
-	return self:_getTileset(gid):_getTile(gid)
+function Map:getTile(gid)
+	return self:getTileset(gid):getTile(gid)
 end
 
 -- Gets the type of the specified tile, if it exists.
 function Map:getTileType(gid)
-	local tile = self:_getTile(gid)
+	local tile = self:getTile(gid)
 	return tile and tile.type
 end
 
 -- Gets the value of the specified property on the specified tile, if it exists.
 function Map:getTileProperty(gid, propertyName)
-	local tile = self:_getTile(gid)
+	local tile = self:getTile(gid)
 	return tile and tile.properties and tile.properties[propertyName] or false
 end
 
