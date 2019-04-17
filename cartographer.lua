@@ -1,5 +1,5 @@
 local cartographer = {
-	_VERSION = 'Cartographer v1.0',
+	_VERSION = 'Cartographer v2.0',
 	_DESCRIPTION = 'Simple Tiled map loading for LÖVE.',
 	_URL = 'https://github.com/tesselode/cartographer',
 	_LICENSE = [[
@@ -54,57 +54,64 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
+-- Represents a tileset in an exported Tiled map.
 local Tileset = {}
 Tileset.__index = Tileset
 
-function Tileset:_initAnimations()
-	self._animations = {}
+function Tileset:_init(map)
+	self._map = map
+	if self.image then
+		local image = self._map._images[self.image]
+		-- save the number of tiles per row so we don't have to calculate it later
+		self._tilesPerRow = math.floor(image:getWidth() / (self.tilewidth + self.spacing))
+	end
+end
+
+-- Gets the tile with the specified global id.
+function Tileset:_getTile(gid)
 	for _, tile in ipairs(self.tiles) do
-		if tile.animation then
-			self._animations[tile.id + 1] = {
-				frames = tile.animation,
-				currentFrame = 1,
-				timer = tile.animation[1].duration,
-				changed = false,
-			}
+		if self.firstgid + tile.id == gid then
+			return tile
 		end
 	end
 end
 
-function Tileset:_init()
-	local path = formatPath(self._map.dir .. self.image)
-	self._image = love.graphics.newImage(path)
-	self._tilesPerRow = math.floor(self._image:getWidth() / (self.tilewidth + self.spacing))
-	self:_initAnimations()
-end
+--[[
+	Gets the image and optionally quad of the tile with the specified global id.
+	If the tileset is a collection of images, then each tile has its own image,
+	so it'll just return the image. If the tileset is one image with a grid
+	that defines the individual tiles, then it'll also return the quad for the
+	specific tile.
 
-function Tileset:_update(dt)
-	for _, animation in pairs(self._animations) do
-		animation.changed = false
-		animation.timer = animation.timer - 1000 * dt
-		while animation.timer <= 0 do
-			animation.currentFrame = animation.currentFrame + 1
-			if animation.currentFrame > #animation.frames then
-				animation.currentFrame = 1
-			end
-			animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
-			animation.changed = true
+	If the tile is animated, then it'll return the correct tile for the current
+	animation frame (defaults to 1).
+]]
+function Tileset:_getTileImageAndQuad(gid, frame)
+	frame = frame or 1
+	local tile = self:_getTile(gid)
+	if tile and tile.animation then
+		-- get the appropriate frame for animated tiles
+		local currentFrameGid = self.firstgid + tile.animation[frame].tileid
+		if currentFrameGid ~= gid then
+			return self:_getTileImageAndQuad(currentFrameGid, frame)
 		end
 	end
-end
-
-function Tileset:_getQuad(gid)
-	if self._animations[gid] then
-		local a = self._animations[gid]
-		gid = a.frames[a.currentFrame].tileid + 1
+	if tile and tile.image then
+		-- if each tile has its own image, just return that image
+		return self._map._images[tile.image]
+	elseif self.image then
+		-- return the tileset image and the quad representing the specific tile
+		local image = self._map._images[self.image]
+		local x, y = getCoordinates(gid - self.firstgid + 1, self._tilesPerRow)
+		local quad = love.graphics.newQuad(
+			x * (self.tilewidth + self.spacing),
+			y * (self.tileheight + self.spacing),
+			self.tilewidth, self.tileheight,
+			image:getWidth(), image:getHeight())
+		return image, quad
+	else
+		return false
 	end
-	local x, y = getCoordinates(gid - self.firstgid + 1, self._tilesPerRow)
-	local quad = love.graphics.newQuad(
-		x * (self.tilewidth + self.spacing),
-		y * (self.tileheight + self.spacing),
-		self.tilewidth, self.tileheight,
-		self._image:getWidth(), self._image:getHeight())
-	return quad
 end
 
 -- this metatable is applied to map.layers so that layers can be accessed
@@ -120,158 +127,311 @@ local LayerList = {
 
 local Layer = {}
 
-Layer.tilelayer = {}
-Layer.tilelayer.__index = Layer.tilelayer
+--[[
+	Represents any layer type that can contain tiles
+	(currently tile layers and object layers).
+	There's no layer type in Tiled called "item layers",
+	it's just a parent class to share code between
+	tile layers and object layers.
+]]
+Layer.itemlayer = {}
+Layer.itemlayer.__index = Layer.itemlayer
 
-function Layer.tilelayer:_createSpriteBatches()
-	self._spriteBatches = {}
-	self._animatedTiles = {}
-	for _, tileset in pairs(self._map.tilesets) do
-		self._spriteBatches[tileset] = love.graphics.newSpriteBatch(tileset._image)
-		self._animatedTiles[tileset] = {}
+-- Starts timers for each animated tile in the map.
+function Layer.itemlayer:_initAnimations()
+	self._animations = {}
+	for _, tileset in ipairs(self._map.tilesets) do
+		self._animations[tileset] = {}
+		for _, tile in ipairs(tileset.tiles) do
+			if tile.animation then
+				local gid = tileset.firstgid + tile.id
+				self._animations[tileset][gid] = {
+					frames = tile.animation,
+					frame = 1,
+					timer = tile.animation[1].duration,
+					sprites = {},
+				}
+			end
+		end
 	end
 end
 
-function Layer.tilelayer:_rememberAnimatedTile(tileset, gid, sprite, x, y)
-	self._animatedTiles[tileset][gid] = self._animatedTiles[tileset][gid] or {}
-	table.insert(self._animatedTiles[tileset][gid], {
-		sprite = sprite,
-		x = x,
-		y = y,
-	})
+-- Creates sprite batches for each single-image tileset.
+function Layer.itemlayer:_createSpriteBatches()
+	self._spriteBatches = {}
+	for _, tileset in ipairs(self._map.tilesets) do
+		if tileset.image then
+			local image = self._map._images[tileset.image]
+			self._spriteBatches[image] = love.graphics.newSpriteBatch(image)
+		end
+	end
 end
 
-function Layer.tilelayer:_getTilePosition(n, width, chunkOffsetX, chunkOffsetY)
+-- Gets the number of items to draw. This is a placeholder, since the behavior
+-- is specific to tile and object layers.
+function Layer.itemlayer:_getNumberOfItems() end
+
+-- Gets the global id, x position, and y position of a tile.
+-- This is a placeholder, since the behavior is specific to tile and object layers.
+-- Can return false if there's no item to draw at this index.
+function Layer.itemlayer:_getItem(i) end
+
+-- Renders the layer to sprite batches. Only tiles that are part
+-- of a single-image tileset are batched.
+function Layer.itemlayer:_fillSpriteBatches()
+	for i = 1, self:_getNumberOfItems() do
+		local gid, x, y = self:_getItem(i)
+		if gid and x and y then
+			local tileset = self._map:_getTileset(gid)
+			if tileset.image then
+				local image, quad = tileset:_getTileImageAndQuad(gid)
+				local id = self._spriteBatches[image]:add(quad, x, y)
+				-- save information about sprites that will be affected by animations,
+				-- since we'll have to update them later
+				if self._animations[tileset][gid] then
+					table.insert(self._animations[tileset][gid].sprites, {
+						id = id,
+						x = x,
+						y = y,
+					})
+				end
+			else
+				-- remember which items aren't part of a sprite batch
+				-- so we can iterate through them in layer.draw
+				table.insert(self._unbatchedItems, {
+					gid = gid,
+					x = x,
+					y = y,
+				})
+			end
+		end
+	end
+end
+
+function Layer.itemlayer:_init(map)
+	self._map = map
+	self._unbatchedItems = {}
+	self:_initAnimations()
+	self:_createSpriteBatches()
+	self:_fillSpriteBatches()
+end
+
+-- Updates the animation timers and changes sprites in the sprite batches as needed.
+function Layer.itemlayer:_updateAnimations(dt)
+	for tileset, tilesetAnimations in pairs(self._animations) do
+		for gid, animation in pairs(tilesetAnimations) do
+			-- decrement the animation timer
+			animation.timer = animation.timer - 1000 * dt
+			while animation.timer <= 0 do
+				-- move to then next frame of animation
+				animation.frame = animation.frame + 1
+				if animation.frame > #animation.frames then
+					animation.frame = 1
+				end
+				-- increment the animation timer by the duration of the new frame
+				animation.timer = animation.timer + animation.frames[animation.frame].duration
+				-- update sprites
+				if tileset.image then
+					local image, quad = tileset:_getTileImageAndQuad(gid, animation.frame)
+					--[[
+						in _fillSpriteBatches we save the id, x position, and y position of sprites
+						in the sprite batch that need to be updated because of animations.
+						here we iterate through them and change the quad.
+					]]
+					for _, sprite in ipairs(animation.sprites) do
+						self._spriteBatches[image]:set(sprite.id, quad, sprite.x, sprite.y)
+					end
+				end
+			end
+		end
+	end
+end
+
+function Layer.itemlayer:update(dt)
+	self:_updateAnimations(dt)
+end
+
+function Layer.itemlayer:draw()
+	love.graphics.push()
+	love.graphics.translate(self.offsetx, self.offsety)
+	-- draw the sprite batches
+	for _, spriteBatch in pairs(self._spriteBatches) do
+		love.graphics.draw(spriteBatch)
+	end
+	-- draw the items that aren't part of a sprite batch
+	for _, item in ipairs(self._unbatchedItems) do
+		local tileset = self._map:_getTileset(item.gid)
+		local frame = 1
+		if self._animations[tileset][item.gid] then
+			frame = self._animations[tileset][item.gid].frame
+		end
+		local image = tileset:_getTileImageAndQuad(item.gid, frame)
+		love.graphics.draw(image, item.x, item.y)
+	end
+	love.graphics.pop()
+end
+
+-- Represents a tile layer in an exported Tiled map.
+Layer.tilelayer = setmetatable({}, {__index = Layer.itemlayer})
+Layer.tilelayer.__index = Layer.tilelayer
+
+-- Gets the x and y position of the nth tile in the layer's tile data.
+function Layer.tilelayer:_getTilePosition(n, width, offsetX, offsetY)
+	width = width or self.width
+	offsetX = offsetX or 0
+	offsetY = offsetY or 0
 	local x, y = getCoordinates(n, width)
-	x, y = x + chunkOffsetX, y + chunkOffsetY
+	x, y = x + offsetX, y + offsetY
 	x, y = x * self._map.tilewidth, y * self._map.tileheight
 	x, y = x + self.offsetx, y + self.offsety
 	return x, y
 end
 
-function Layer.tilelayer:_fillSpriteBatches(data, chunkOffsetX, chunkOffsetY, width)
-	data = data or self.data
-	chunkOffsetX = chunkOffsetX or 0
-	chunkOffsetY = chunkOffsetY or 0
-	width = width or self.width
-	if data then
-		for n, gid in ipairs(data) do
-			if gid ~= 0 then
-				local tileset = self._map:_getTileset(gid)
-				local q = tileset:_getQuad(gid)
-				local x, y = self:_getTilePosition(n, width, chunkOffsetX, chunkOffsetY)
-				local sprite = self._spriteBatches[tileset]:add(q, x, y)
-				if tileset._animations[gid] then
-					self:_rememberAnimatedTile(tileset, gid, sprite, x, y)
-				end
-			end
-		end
-	elseif self.chunks then
+function Layer.tilelayer:_getNumberOfItems()
+	-- for infinite maps, get the total number of items split up among all the chunks
+	if self.chunks then
+		local items = 0
 		for _, chunk in ipairs(self.chunks) do
-			self:_fillSpriteBatches(chunk.data, chunk.x, chunk.y, chunk.width)
+			items = items + #chunk.data
 		end
+		return items
 	end
+	-- otherwise, just get the length of the data
+	return #self.data
 end
 
-function Layer.tilelayer:_init()
-	self:_createSpriteBatches()
-	self:_fillSpriteBatches()
-end
-
-function Layer.tilelayer:_updateAnimatedTiles()
-	for tileset, spriteBatch in pairs(self._spriteBatches) do
-		for gid, animation in pairs(tileset._animations) do
-			if self._animatedTiles[tileset][gid] and animation.changed then
-				local q = tileset:_getQuad(gid)
-				for _, tile in pairs(self._animatedTiles[tileset][gid]) do
-					spriteBatch:set(tile.sprite, q, tile.x, tile.y)
+function Layer.tilelayer:_getItem(i)
+	--[[
+		for infinite maps, treat all the chunk data like one big array
+		each chunk has its own row width and x/y offset, which we factor
+		into the position of each sprite on the screen
+	]]
+	if self.chunks then
+		for _, chunk in ipairs(self.chunks) do
+			if i <= #chunk.data then
+				local gid = chunk.data[i]
+				if gid ~= 0 then
+					local x, y = self:_getTilePosition(i, chunk.width, chunk.x, chunk.y)
+					return gid, x, y
 				end
+				return false
 			end
+			i = i - #chunk.data
 		end
 	end
-end
-
-function Layer.tilelayer:_update(dt)
-	self:_updateAnimatedTiles()
-end
-
-function Layer.tilelayer:draw()
-	love.graphics.setColor(1, 1, 1)
-	for _, spriteBatch in pairs(self._spriteBatches) do
-		love.graphics.draw(spriteBatch)
+	local gid = self.data[i]
+	if gid ~= 0 then
+		local x, y = self:_getTilePosition(i)
+		return gid, x, y
 	end
+	return false
 end
 
+-- Represents an object layer in an exported Tiled map.
+Layer.objectgroup = setmetatable({}, {__index = Layer.itemlayer})
+Layer.objectgroup.__index = Layer.objectgroup
+
+function Layer.objectgroup:_getNumberOfItems()
+	return #self.objects
+end
+
+function Layer.objectgroup:_getItem(i)
+	local object = self.objects[i]
+	-- tile objects are anchored at the bottom
+	return object.gid, object.x, object.y - object.height
+end
+
+-- Represents an image layer in an exported Tiled map.
 Layer.imagelayer = {}
 Layer.imagelayer.__index = Layer.imagelayer
 
-function Layer.imagelayer:_init()
-	local path = formatPath(self._map.dir .. self.image)
-	self._image = love.graphics.newImage(path)
+function Layer.imagelayer:_init(map)
+	self._map = map
 end
-
-function Layer.imagelayer:_update(dt) end
 
 function Layer.imagelayer:draw()
-	love.graphics.setColor(1, 1, 1)
-	love.graphics.draw(self._image)
+	love.graphics.draw(self._map._images[self.image], self.offsetx, self.offsety)
 end
 
-Layer.objectgroup = {}
-Layer.objectgroup.__index = Layer.objectgroup
-
-function Layer.objectgroup:_init() end
-
-function Layer.objectgroup:_update(dt) end
-
-function Layer.objectgroup:draw() end
-
+-- Represents a layer group in an exported Tiled map.
 Layer.group = {}
 Layer.group.__index = Layer.group
 
-function Layer.group:_init()
+function Layer.group:_init(map)
 	for _, layer in ipairs(self.layers) do
 		setmetatable(layer, Layer[layer.type])
-		layer._map = self._map
-		layer:_init()
+		layer:_init(map)
 	end
 	setmetatable(self.layers, LayerList)
 end
 
-function Layer.group:_update(dt) end
-
-function Layer.group:draw()
+function Layer.group:_update(dt)
 	for _, layer in ipairs(self.layers) do
-		if layer.visible then layer:draw() end
+		if layer.update then layer:update(dt) end
 	end
 end
 
+function Layer.group:draw()
+	love.graphics.push()
+	love.graphics.translate(self.offsetx, self.offsety)
+	for _, layer in ipairs(self.layers) do
+		if layer.visible and layer.draw then layer:draw() end
+	end
+	love.graphics.pop()
+end
+
+-- Represents an exported Tiled map.
 local Map = {}
 Map.__index = Map
 
-function Map:_init(path)
-	self.dir = splitPath(path)
-	self:_initTilesets()
-	self:_initLayers()
+-- Loads an image if it hasn't already been loaded yet.
+-- Images are stored in map._images, and the key is the relative
+-- path to the image.
+function Map:_loadImage(relativeImagePath)
+	if self._images[relativeImagePath] then return end
+	local imagePath = formatPath(self.dir .. relativeImagePath)
+	self._images[relativeImagePath] = love.graphics.newImage(imagePath)
+end
+
+-- Loads all of the images used by the map.
+function Map:_loadImages()
+	self._images = {}
+	for _, tileset in ipairs(self.tilesets) do
+		if tileset.image then self:_loadImage(tileset.image) end
+		for _, tile in ipairs(tileset.tiles) do
+			if tile.image then self:_loadImage(tile.image) end
+		end
+	end
+	for _, layer in ipairs(self.layers) do
+		if layer.type == 'imagelayer' then
+			self:_loadImage(layer.image)
+		end
+	end
 end
 
 function Map:_initTilesets()
 	for _, tileset in ipairs(self.tilesets) do
 		setmetatable(tileset, Tileset)
-		tileset._map = self
-		tileset:_init()
+		tileset:_init(self)
 	end
 end
 
 function Map:_initLayers()
 	for _, layer in ipairs(self.layers) do
 		setmetatable(layer, Layer[layer.type])
-		layer._map = self
-		layer:_init()
+		if layer._init then layer:_init(self) end
 	end
 	setmetatable(self.layers, LayerList)
 end
 
+function Map:_init(path)
+	self.dir = splitPath(path)
+	self:_loadImages()
+	self:_initTilesets()
+	self:_initLayers()
+end
+
+-- Gets the tileset the tile with the specified global id belongs to.
 function Map:_getTileset(gid)
 	for i = #self.tilesets, 1, -1 do
 		if gid >= self.tilesets[i].firstgid then
@@ -280,7 +440,30 @@ function Map:_getTileset(gid)
 	end
 end
 
-function Map:_drawBackground()
+-- Gets the tile with the specified global id.
+function Map:_getTile(gid)
+	return self:_getTileset(gid):_getTile(gid)
+end
+
+-- Gets the type of the specified tile, if it exists.
+function Map:getTileType(gid)
+	local tile = self:_getTile(gid)
+	return tile and tile.type
+end
+
+-- Gets the value of the specified property on the specified tile, if it exists.
+function Map:getTileProperty(gid, propertyName)
+	local tile = self:_getTile(gid)
+	return tile and tile.properties and tile.properties[propertyName] or false
+end
+
+function Map:update(dt)
+	for _, layer in ipairs(self.layers) do
+		if layer.update then layer:update(dt) end
+	end
+end
+
+function Map:drawBackground()
 	if self.backgroundcolor then
 		local r = self.backgroundcolor[1] / 255
 		local g = self.backgroundcolor[2] / 255
@@ -292,22 +475,14 @@ function Map:_drawBackground()
 	end
 end
 
-function Map:update(dt)
-	for _, tileset in ipairs(self.tilesets) do
-		tileset:_update(dt)
-	end
-	for _, layer in ipairs(self.layers) do
-		layer:_update(dt)
-	end
-end
-
 function Map:draw()
-	self:_drawBackground()
+	self:drawBackground()
 	for _, layer in ipairs(self.layers) do
-		if layer.visible then layer:draw() end
+		if layer.visible and layer.draw then layer:draw() end
 	end
 end
 
+-- Loads a Tiled map from a lua file.
 function cartographer.load(path)
 	if not path then
 		error('No map path provided', 2)

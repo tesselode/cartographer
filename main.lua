@@ -1,6 +1,6 @@
 local cartographer = require 'cartographer'
 
-local testMap = cartographer.load 'demo/groups.lua'
+local testMap = cartographer.load 'demos/rpg/rpg.lua'
 
 function love.update(dt)
 	testMap:update(dt)
