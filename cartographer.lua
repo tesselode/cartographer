@@ -365,7 +365,7 @@ function Layer.group:_init(map)
 	setmetatable(self.layers, LayerList)
 end
 
-function Layer.group:_update(dt)
+function Layer.group:update(dt)
 	for _, layer in ipairs(self.layers) do
 		if layer.update then layer:update(dt) end
 	end
