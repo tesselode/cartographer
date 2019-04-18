@@ -168,9 +168,33 @@ function Layer.itemlayer:_createSpriteBatches()
 end
 
 -- Renders the layer to sprite batches. Only tiles that are part
--- of a single-image tileset are batched. This is a placeholder function,
--- as tile layers and object layers each have their own implementation.
-function Layer.itemlayer:_fillSpriteBatches() end
+-- of a single-image tileset are batched.
+function Layer.itemlayer:_fillSpriteBatches()
+	for _, gid, x, y in self:_getDrawableItems() do
+		local tileset = self._map:getTileset(gid)
+		if tileset.image then
+			local image, quad = tileset:_getTileImageAndQuad(gid)
+			local id = self._spriteBatches[image]:add(quad, x, y)
+			-- save information about sprites that will be affected by animations,
+			-- since we'll have to update them later
+			if self._animations[tileset][gid] then
+				table.insert(self._animations[tileset][gid].sprites, {
+					id = id,
+					x = x,
+					y = y,
+				})
+			end
+		else
+			-- remember which items aren't part of a sprite batch
+			-- so we can iterate through them in layer.draw
+			table.insert(self._unbatchedItems, {
+				gid = gid,
+				x = x,
+				y = y,
+			})
+		end
+	end
+end
 
 function Layer.itemlayer:_init(map)
 	self._map = map
@@ -286,65 +310,25 @@ function Layer.tilelayer:getTiles()
 	return self._tileIterator, self, 0
 end
 
-function Layer.tilelayer:_fillSpriteBatches()
-	for _, gid, x, y in self:getTiles() do
-		local tileset = self._map:getTileset(gid)
-		if tileset.image then
-			local image, quad = tileset:_getTileImageAndQuad(gid)
-			local id = self._spriteBatches[image]:add(quad, x, y)
-			-- save information about sprites that will be affected by animations,
-			-- since we'll have to update them later
-			if self._animations[tileset][gid] then
-				table.insert(self._animations[tileset][gid].sprites, {
-					id = id,
-					x = x,
-					y = y,
-				})
-			end
-		else
-			-- remember which items aren't part of a sprite batch
-			-- so we can iterate through them in layer.draw
-			table.insert(self._unbatchedItems, {
-				gid = gid,
-				x = x,
-				y = y,
-			})
-		end
-	end
-end
+Layer.tilelayer._getDrawableItems = Layer.tilelayer.getTiles
 
 -- Represents an object layer in an exported Tiled map.
 Layer.objectgroup = setmetatable({}, {__index = Layer.itemlayer})
 Layer.objectgroup.__index = Layer.objectgroup
 
-function Layer.objectgroup:_fillSpriteBatches()
-	for _, object in ipairs(self.objects) do
+function Layer.objectgroup:_drawableObjectsIterator(i)
+	while true do
+		i = i + 1
+		local object = self.objects[i]
+		if not object then break end
 		if object.gid then
-			local x, y = object.x, object.y - object.height
-			local tileset = self._map:getTileset(object.gid)
-			if tileset.image then
-				local image, quad = tileset:_getTileImageAndQuad(object.gid)
-				local id = self._spriteBatches[image]:add(quad, x, y)
-				-- save information about sprites that will be affected by animations,
-				-- since we'll have to update them later
-				if self._animations[tileset][object.gid] then
-					table.insert(self._animations[tileset][object.gid].sprites, {
-						id = id,
-						x = x,
-						y = y,
-					})
-				end
-			else
-				-- remember which items aren't part of a sprite batch
-				-- so we can iterate through them in layer.draw
-				table.insert(self._unbatchedItems, {
-					gid = object.gid,
-					x = x,
-					y = y,
-				})
-			end
+			return i, object.gid, object.x, object.y - object.height
 		end
 	end
+end
+
+function Layer.objectgroup:_getDrawableItems()
+	return self._drawableObjectsIterator, self, 0
 end
 
 -- Represents an image layer in an exported Tiled map.
