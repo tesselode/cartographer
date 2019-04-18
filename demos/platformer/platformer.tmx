@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.2" orientation="orthogonal" renderorder="right-down" width="32" height="18" tilewidth="16" tileheight="16" infinite="1" nextlayerid="6" nextobjectid="8">
+<map version="1.2" tiledversion="1.2.3" orientation="orthogonal" renderorder="right-down" width="32" height="18" tilewidth="16" tileheight="16" infinite="1" nextlayerid="7" nextobjectid="8">
  <tileset firstgid="1" source="tiles.tsx"/>
  <tileset firstgid="6913" source="objects.tsx"/>
  <imagelayer id="5" name="background" offsetx="48" offsety="112">
   <image source="background.png" width="256" height="128"/>
  </imagelayer>
- <group id="4" name="terrain">
-  <layer id="1" name="terrainMain" width="32" height="18">
-   <data encoding="csv">
-    <chunk x="0" y="0" width="16" height="16">
+ <group id="6" name="foreground">
+  <group id="4" name="terrain">
+   <layer id="1" name="terrainMain" width="32" height="18">
+    <data encoding="csv">
+     <chunk x="0" y="0" width="16" height="16">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -26,7 +27,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </chunk>
-    <chunk x="16" y="0" width="16" height="16">
+     <chunk x="16" y="0" width="16" height="16">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -44,11 +45,11 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </chunk>
-   </data>
-  </layer>
-  <layer id="2" name="terrainFront" width="32" height="18">
-   <data encoding="csv">
-    <chunk x="0" y="0" width="16" height="16">
+    </data>
+   </layer>
+   <layer id="2" name="terrainFront" width="32" height="18">
+    <data encoding="csv">
+     <chunk x="0" y="0" width="16" height="16">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -66,7 +67,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </chunk>
-    <chunk x="16" y="0" width="16" height="16">
+     <chunk x="16" y="0" width="16" height="16">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -84,14 +85,15 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </chunk>
-   </data>
-  </layer>
+    </data>
+   </layer>
+  </group>
+  <objectgroup id="3" name="entities">
+   <object id="2" gid="6913" x="320" y="160" width="16" height="24"/>
+   <object id="3" gid="6914" x="433" y="80" width="14" height="8"/>
+   <object id="4" gid="1793" x="192" y="176" width="16" height="16"/>
+   <object id="5" gid="1857" x="368" y="160" width="16" height="16"/>
+   <object id="7" gid="6917" x="128" y="176" width="16" height="20"/>
+  </objectgroup>
  </group>
- <objectgroup id="3" name="entities">
-  <object id="2" gid="6913" x="320" y="160" width="16" height="24"/>
-  <object id="3" gid="6914" x="433" y="80" width="14" height="8"/>
-  <object id="4" gid="1793" x="192" y="176" width="16" height="16"/>
-  <object id="5" gid="1857" x="368" y="160" width="16" height="16"/>
-  <object id="7" gid="6917" x="128" y="176" width="16" height="20"/>
- </objectgroup>
 </map>

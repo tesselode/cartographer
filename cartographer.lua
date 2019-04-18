@@ -125,6 +125,23 @@ local LayerList = {
 	end,
 }
 
+local function getLayer(self, ...)
+	local numberOfArguments = select('#', ...)
+	if numberOfArguments == 0 then
+		error('must specify at least one layer name', 2)
+	end
+	local layer
+	local layerName = select(1, ...)
+	if not self.layers[layerName] then return end
+	layer = self.layers[layerName]
+	for i = 2, numberOfArguments do
+		layerName = select(i, ...)
+		if not (layer.layers and layer.layers[layerName]) then return end
+		layer = layer.layers[layerName]
+	end
+	return layer
+end
+
 local Layer = {}
 
 --[[
@@ -355,6 +372,8 @@ function Layer.group:_init(map)
 	setmetatable(self.layers, LayerList)
 end
 
+Layer.group.getLayer = getLayer
+
 function Layer.group:update(dt)
 	for _, layer in ipairs(self.layers) do
 		if layer.update then layer:update(dt) end
@@ -420,6 +439,8 @@ function Map:_init(path)
 	self:_initTilesets()
 	self:_initLayers()
 end
+
+Map.getLayer = getLayer
 
 -- Gets the tileset the tile with the specified global id belongs to.
 function Map:getTileset(gid)
