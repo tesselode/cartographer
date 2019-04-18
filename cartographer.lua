@@ -167,15 +167,6 @@ function Layer.itemlayer:_createSpriteBatches()
 	end
 end
 
--- Gets the number of items to draw. This is a placeholder, since the behavior
--- is specific to tile and object layers.
-function Layer.itemlayer:_getNumberOfItems() end
-
--- Gets the global id, x position, and y position of a tile.
--- This is a placeholder, since the behavior is specific to tile and object layers.
--- Can return false if there's no item to draw at this index.
-function Layer.itemlayer:_getItem(i) end
-
 -- Renders the layer to sprite batches. Only tiles that are part
 -- of a single-image tileset are batched. This is a placeholder function,
 -- as tile layers and object layers each have their own implementation.
@@ -260,20 +251,7 @@ function Layer.tilelayer:_getTilePosition(n, width, offsetX, offsetY)
 	return x, y
 end
 
-function Layer.tilelayer:_getNumberOfItems()
-	-- for infinite maps, get the total number of items split up among all the chunks
-	if self.chunks then
-		local items = 0
-		for _, chunk in ipairs(self.chunks) do
-			items = items + #chunk.data
-		end
-		return items
-	end
-	-- otherwise, just get the length of the data
-	return #self.data
-end
-
-function Layer.tilelayer:_getItem(i)
+function Layer.tilelayer:_getTile(i)
 	--[[
 		for infinite maps, treat all the chunk data like one big array
 		each chunk has its own row width and x/y offset, which we factor
@@ -283,49 +261,54 @@ function Layer.tilelayer:_getItem(i)
 		for _, chunk in ipairs(self.chunks) do
 			if i <= #chunk.data then
 				local gid = chunk.data[i]
-				if gid then
-					local x, y = self:_getTilePosition(i, chunk.width, chunk.x, chunk.y)
-					return gid, x, y
-				end
-				return false
+				local x, y = self:_getTilePosition(i, chunk.width, chunk.x, chunk.y)
+				return gid, x, y
 			end
 			i = i - #chunk.data
 		end
-	end
-	local gid = self.data[i]
-	if gid then
+	elseif self.data[i] then
+		local gid = self.data[i]
 		local x, y = self:_getTilePosition(i)
 		return gid, x, y
 	end
-	return false
+end
+
+function Layer.tilelayer:_tileIterator(i)
+	while true do
+		i = i + 1
+		local gid, x, y = self:_getTile(i)
+		if not gid then break end
+		if gid ~= 0 then return i, gid, x, y end
+	end
+end
+
+function Layer.tilelayer:getTiles()
+	return self._tileIterator, self, 0
 end
 
 function Layer.tilelayer:_fillSpriteBatches()
-	for i = 1, self:_getNumberOfItems() do
-		local gid, x, y = self:_getItem(i)
-		if gid ~= 0 then
-			local tileset = self._map:getTileset(gid)
-			if tileset.image then
-				local image, quad = tileset:_getTileImageAndQuad(gid)
-				local id = self._spriteBatches[image]:add(quad, x, y)
-				-- save information about sprites that will be affected by animations,
-				-- since we'll have to update them later
-				if self._animations[tileset][gid] then
-					table.insert(self._animations[tileset][gid].sprites, {
-						id = id,
-						x = x,
-						y = y,
-					})
-				end
-			else
-				-- remember which items aren't part of a sprite batch
-				-- so we can iterate through them in layer.draw
-				table.insert(self._unbatchedItems, {
-					gid = gid,
+	for _, gid, x, y in self:getTiles() do
+		local tileset = self._map:getTileset(gid)
+		if tileset.image then
+			local image, quad = tileset:_getTileImageAndQuad(gid)
+			local id = self._spriteBatches[image]:add(quad, x, y)
+			-- save information about sprites that will be affected by animations,
+			-- since we'll have to update them later
+			if self._animations[tileset][gid] then
+				table.insert(self._animations[tileset][gid].sprites, {
+					id = id,
 					x = x,
 					y = y,
 				})
 			end
+		else
+			-- remember which items aren't part of a sprite batch
+			-- so we can iterate through them in layer.draw
+			table.insert(self._unbatchedItems, {
+				gid = gid,
+				x = x,
+				y = y,
+			})
 		end
 	end
 end
@@ -333,10 +316,6 @@ end
 -- Represents an object layer in an exported Tiled map.
 Layer.objectgroup = setmetatable({}, {__index = Layer.itemlayer})
 Layer.objectgroup.__index = Layer.objectgroup
-
-function Layer.objectgroup:_getNumberOfItems()
-	return #self.objects
-end
 
 function Layer.objectgroup:_fillSpriteBatches()
 	for _, object in ipairs(self.objects) do
