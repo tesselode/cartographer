@@ -54,6 +54,10 @@ local function getCoordinates(n, w)
 	return (n - 1) % w, math.floor((n - 1) / w)
 end
 
+local function coordinatesToIndex(x, y, w)
+	return x + w * y + 1
+end
+
 -- Represents a tileset in an exported Tiled map.
 local Tileset = {}
 Tileset.__index = Tileset
@@ -228,7 +232,7 @@ function Layer.itemlayer:_updateAnimations(dt)
 			-- decrement the animation timer
 			animation.timer = animation.timer - 1000 * dt
 			while animation.timer <= 0 do
-				-- move to then next frame of animation
+				-- move to the next frame of animation
 				animation.frame = animation.frame + 1
 				if animation.frame > #animation.frames then
 					animation.frame = 1
@@ -280,7 +284,7 @@ end
 Layer.tilelayer = setmetatable({}, {__index = Layer.itemlayer})
 Layer.tilelayer.__index = Layer.tilelayer
 
--- Gets the x and y position of the nth tile in the layer's tile data.
+-- Gets the x and y position of the nth tile in the layer's tile data (in world coordinates).
 function Layer.tilelayer:_getTilePosition(n, width, offsetX, offsetY)
 	width = width or self.width
 	offsetX = offsetX or 0
@@ -325,6 +329,40 @@ end
 
 function Layer.tilelayer:getTiles()
 	return self._tileIterator, self, 0
+end
+
+function Layer.tilelayer:getTileAt(x, y)
+	if self.chunks then
+		for _, chunk in ipairs(self.chunks) do
+			local pointInChunk = x >= chunk.x
+							 and x < chunk.x + chunk.width
+							 and y >= chunk.y
+							 and y < chunk.y + chunk.height
+			if pointInChunk then
+				return chunk.data[coordinatesToIndex(x - chunk.x, y - chunk.y, chunk.width)]
+			end
+		end
+	else
+		return self.data[coordinatesToIndex(x, y, self.width)]
+	end
+end
+
+function Layer.tilelayer:getBounds()
+	if self.chunks then
+		local left, top, right, bottom
+		for _, chunk in ipairs(self.chunks) do
+			local chunkLeft = chunk.x
+			local chunkTop = chunk.y
+			local chunkRight = chunk.x + chunk.width - 1
+			local chunkBottom = chunk.y + chunk.height - 1
+			if not left or chunkLeft < left then left = chunkLeft end
+			if not top or chunkTop < top then top = chunkTop end
+			if not right or chunkRight > right then right = chunkRight end
+			if not bottom or chunkBottom > bottom then bottom = chunkBottom end
+		end
+		return left, top, right, bottom
+	end
+	return self.x, self.y, self.x + self.width - 1, self.y + self.height - 1
 end
 
 Layer.tilelayer._getDrawableItems = Layer.tilelayer.getTiles

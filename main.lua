@@ -1,7 +1,13 @@
 local cartographer = require 'cartographer'
 
 local testMap = cartographer.load 'demos/platformer/platformer.lua'
-print(testMap:getLayer('foreground').name)
+local layer = testMap:getLayer('foreground', 'terrain', 'terrainMain')
+local l, t, r, b = layer:getBounds()
+for x = l, r do
+	for y = t, b do
+		print(layer:getTileAt(x, y))
+	end
+end
 
 function love.update(dt)
 	testMap:update(dt)
