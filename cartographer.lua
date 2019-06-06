@@ -29,12 +29,77 @@ end
 local Tileset = {}
 Tileset.__index = Tileset
 
+-- Gets the info table for a tile with the given local ID, if it exists.
+function Tileset:getTile(id)
+	for _, tile in ipairs(self.tiles) do
+		if tile.id == id then return tile end
+	end
+end
+
+-- Gets the value of the specified property on the tile
+-- with the given local ID, if it exists.
+function Tileset:getTileProperty(id, propertyName)
+	local tile = self:getTile(id)
+	if not tile then return end
+	if not tile.properties then return end
+	return tile.properties[propertyName]
+end
+
+-- Sets the value of the specified property on the tile
+-- with the given local ID.
+function Tileset:setTileProperty(id, propertyName, propertyValue)
+	local tile = self:getTile(id)
+	if not tile then
+		tile = {id = id}
+		table.insert(self.tiles, tile)
+	end
+	tile.properties = tile.properties or {}
+	tile.properties[propertyName] = propertyValue
+end
+
 local Map = {}
 Map.__index = Map
 
-function Map:_init()
+function Map:_initTilesets()
+	for _, tileset in ipairs(self.tilesets) do
+		setmetatable(tileset, Tileset)
+	end
 	setmetatable(self.tilesets, getByNameMetatable)
+end
+
+function Map:_init()
+	self:_initTilesets()
 	setmetatable(self.layers, getByNameMetatable)
+end
+
+-- Gets the tileset that has the tile with the given global ID.
+function Map:getTileset(gid)
+	for i = #self.tilesets, 1, -1 do
+		local tileset = self.tilesets[i]
+		if tileset.firstgid <= gid then
+			return tileset
+		end
+	end
+end
+
+-- Gets the data table for the tile with the given global ID, if it exists.
+function Map:getTile(gid)
+	local tileset = self:getTileset(gid)
+	return tileset:getTile(gid - tileset.firstgid)
+end
+
+-- Gets the value of the specified property on the tile
+-- with the given global ID, if it exists.
+function Map:getTileProperty(gid, propertyName)
+	local tileset = self:getTileset(gid)
+	return tileset:getTileProperty(gid - tileset.firstgid, propertyName)
+end
+
+-- Sets the value of the specified property on the tile
+-- with the given global ID.
+function Map:setTileProperty(gid, propertyName, propertyValue)
+	local tileset = self:getTileset(gid)
+	return tileset:setTileProperty(gid - tileset.firstgid, propertyName, propertyValue)
 end
 
 Map.getLayer = getLayer
