@@ -1,5 +1,17 @@
 local cartographer = {}
 
+-- given a grid with w items per row, return the column and row of the nth item
+-- (going from left to right, top to bottom)
+-- https://stackoverflow.com/a/9816217
+local function indexToCoordinates(n, w)
+	return (n - 1) % w, math.floor((n - 1) / w)
+end
+
+local function coordinatesToIndex(x, y, w)
+	return x + w * y + 1
+end
+
+
 local getByNameMetatable = {
 	__index = function(self, key)
 		for _, item in ipairs(self) do
@@ -86,6 +98,86 @@ end
 -- Represents a tile layer in an exported Tiled map.
 Layer.tilelayer = setmetatable({}, Layer.base)
 Layer.tilelayer.__index = Layer.tilelayer
+
+function Layer.tilelayer:getGridBounds()
+	if self.chunks then
+		local left, top, right, bottom
+		for _, chunk in ipairs(self.chunks) do
+			local chunkLeft = chunk.x
+			local chunkTop = chunk.y
+			local chunkRight = chunk.x + chunk.width - 1
+			local chunkBottom = chunk.y + chunk.height - 1
+			if not left or chunkLeft < left then left = chunkLeft end
+			if not top or chunkTop < top then top = chunkTop end
+			if not right or chunkRight > right then right = chunkRight end
+			if not bottom or chunkBottom > bottom then bottom = chunkBottom end
+		end
+		return left, top, right, bottom
+	end
+	return self.x, self.y, self.x + self.width - 1, self.y + self.height - 1
+end
+
+function Layer.tilelayer:getPixelBounds()
+	local left, top, right, bottom = self:getGridBounds()
+	left, top = self:gridToPixel(left, top)
+	right, bottom = self:gridToPixel(right, bottom)
+	return left, top, right, bottom
+end
+
+function Layer.tilelayer:getTileAtGridPosition(x, y)
+	if self.chunks then
+		for _, chunk in ipairs(self.chunks) do
+			local pointInChunk = x >= chunk.x
+							 and x < chunk.x + chunk.width
+							 and y >= chunk.y
+							 and y < chunk.y + chunk.height
+			if pointInChunk then
+				return chunk.data[coordinatesToIndex(x - chunk.x, y - chunk.y, chunk.width)]
+			end
+		end
+	else
+		return self.data[coordinatesToIndex(x, y, self.width)]
+	end
+end
+
+function Layer.tilelayer:getTileAtPixelPosition(x, y)
+	return self:getTileAtGridPosition(self:pixelToGrid(x, y))
+end
+
+function Layer.tilelayer:_getTileAtIndex(index)
+	-- for infinite maps, treat all the chunk data like one big array
+	if self.chunks then
+		for _, chunk in ipairs(self.chunks) do
+			if index <= #chunk.data then
+				local gid = chunk.data[index]
+				local gridX, gridY = indexToCoordinates(index, self.width)
+				gridX, gridY = gridX + chunk.x, gridY + chunk.y
+				local pixelX, pixelY = self:gridToPixel(gridX, gridY)
+				return gid, gridX, gridY, pixelX, pixelY
+			else
+				index = index - #chunk.data
+			end
+		end
+	elseif self.data[index] then
+		local gid = self.data[index]
+		local gridX, gridY = indexToCoordinates(index, self.width)
+		local pixelX, pixelY = self:gridToPixel(gridX, gridY)
+		return gid, gridX, gridY, pixelX, pixelY
+	end
+end
+
+function Layer.tilelayer:_tileIterator(i)
+	while true do
+		i = i + 1
+		local gid, gridX, gridY, pixelX, pixelY = self:_getTileAtIndex(i)
+		if not gid then break end
+		if gid ~= 0 then return i, gid, gridX, gridY, pixelX, pixelY end
+	end
+end
+
+function Layer.tilelayer:getTiles()
+	return self._tileIterator, self, 0
+end
 
 -- Represents an object layer in an exported Tiled map.
 Layer.objectgroup = setmetatable({}, Layer.base)
