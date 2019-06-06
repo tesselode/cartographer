@@ -119,12 +119,14 @@ function Layer.tilelayer:_init(map)
 	self:_createSpriteBatches()
 	self._sprites = {}
 	self._unbatchedItems = {}
-	for _, gid, _, _, pixelX, pixelY in self:getTiles() do
+	for _, gid, gridX, gridY, pixelX, pixelY in self:getTiles() do
 		local tileset = self._map:getTileset(gid)
 		if tileset.image then
 			local quad = self._map:_getTileQuad(gid)
 			table.insert(self._sprites, {
 				tileGid = gid,
+				gridX = gridX,
+				gridY = gridY,
 				pixelX = pixelX,
 				pixelY = pixelY,
 				id = self._spriteBatches[tileset]:add(quad, pixelX, pixelY),
@@ -134,8 +136,10 @@ function Layer.tilelayer:_init(map)
 			-- so we can iterate through them in layer.draw
 			table.insert(self._unbatchedItems, {
 				gid = gid,
-				x = pixelX,
-				y = pixelY,
+				gridX = gridX,
+				gridY = gridY,
+				pixelX = pixelX,
+				pixelY = pixelY,
 			})
 		end
 	end
@@ -287,7 +291,7 @@ function Layer.tilelayer:draw()
 	-- draw the items that aren't part of a sprite batch
 	for _, item in ipairs(self._unbatchedItems) do
 		local tile = self._map:getTile(item.gid)
-		love.graphics.draw(self._map._images[tile.image], item.x, item.y)
+		love.graphics.draw(self._map._images[tile.image], item.pixelX, item.pixelY)
 	end
 	love.graphics.pop()
 end
