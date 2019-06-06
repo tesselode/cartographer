@@ -26,6 +26,7 @@ local function getLayer(self, ...)
 	return layer
 end
 
+-- Represents a tileset in an exported Tiled map.
 local Tileset = {}
 Tileset.__index = Tileset
 
@@ -57,6 +58,58 @@ function Tileset:setTileProperty(id, propertyName, propertyValue)
 	tile.properties[propertyName] = propertyValue
 end
 
+local Layer = {}
+
+-- A common class for all layer types.
+Layer.base = {}
+Layer.base.__index = Layer.base
+
+function Layer.base:_init(map)
+	self.map = map
+end
+
+-- Converts grid coordinates to pixel coordinates for this layer.
+function Layer.base:gridToPixel(x, y)
+	x, y = x * self.map.tilewidth, y * self.map.tileheight
+	x, y = x + self.offsetx, y + self.offsety
+	return x, y
+end
+
+-- Converts pixel coordinates for this layer to grid coordinates.
+function Layer.base:pixelToGrid(x, y)
+	x, y = x - self.offsetx, y - self.offsety
+	x, y = x / self.map.tilewidth, y / self.map.tileheight
+	x, y = math.floor(x), math.floor(y)
+	return x, y
+end
+
+-- Represents a tile layer in an exported Tiled map.
+Layer.tilelayer = setmetatable({}, Layer.base)
+Layer.tilelayer.__index = Layer.tilelayer
+
+-- Represents an object layer in an exported Tiled map.
+Layer.objectgroup = setmetatable({}, Layer.base)
+Layer.objectgroup.__index = Layer.objectgroup
+
+-- Represents an image layer in an exported Tiled map.
+Layer.imagelayer = setmetatable({}, Layer.base)
+Layer.imagelayer.__index = Layer.imagelayer
+
+-- Represents a layer group in an exported Tiled map.
+Layer.group = setmetatable({}, Layer.base)
+Layer.group.__index = Layer.group
+
+function Layer.group:_init(map)
+	Layer.base._init(self, map)
+	for _, layer in ipairs(self.layers) do
+		setmetatable(layer, Layer[layer.type])
+		layer:_init(map)
+	end
+	setmetatable(self.layers, getByNameMetatable)
+end
+
+Layer.group.getLayer = getLayer
+
 local Map = {}
 Map.__index = Map
 
@@ -67,9 +120,17 @@ function Map:_initTilesets()
 	setmetatable(self.tilesets, getByNameMetatable)
 end
 
+function Map:_initLayers()
+	for _, layer in ipairs(self.layers) do
+		setmetatable(layer, Layer[layer.type])
+		layer:_init(self)
+	end
+	setmetatable(self.layers, getByNameMetatable)
+end
+
 function Map:_init()
 	self:_initTilesets()
-	setmetatable(self.layers, getByNameMetatable)
+	self:_initLayers()
 end
 
 -- Gets the tileset that has the tile with the given global ID.
