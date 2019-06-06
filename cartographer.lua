@@ -61,6 +61,15 @@ end
 local Tileset = {}
 Tileset.__index = Tileset
 
+function Tileset:_init(map)
+	self._map = map
+	if self.image then
+		local image = self._map._images[self.image]
+		-- save the number of tiles per row so we don't have to calculate it later
+		self._tilesPerRow = math.floor(image:getWidth() / (self.tilewidth + self.spacing))
+	end
+end
+
 -- Gets the info table for a tile with the given local ID, if it exists.
 function Tileset:getTile(id)
 	for _, tile in ipairs(self.tiles) do
@@ -87,6 +96,18 @@ function Tileset:setTileProperty(id, propertyName, propertyValue)
 	end
 	tile.properties = tile.properties or {}
 	tile.properties[propertyName] = propertyValue
+end
+
+-- Gets the quad of the tile with the given local ID.
+function Tileset:_getQuad(id)
+	local image = self._map._images[self.image]
+	local x, y = indexToCoordinates(id + 1, self._tilesPerRow)
+	return love.graphics.newQuad(
+		x * (self.tilewidth + self.spacing),
+		y * (self.tileheight + self.spacing),
+		self.tilewidth, self.tileheight,
+		image:getWidth(), image:getHeight()
+	)
 end
 
 local Layer = {}
@@ -117,6 +138,36 @@ end
 -- Represents a tile layer in an exported Tiled map.
 Layer.tilelayer = setmetatable({}, Layer.base)
 Layer.tilelayer.__index = Layer.tilelayer
+
+function Layer.tilelayer:_init(map)
+	Layer.base._init(self, map)
+	self._spriteBatches = {}
+	self._sprites = {}
+	for _, tileset in ipairs(self._map.tilesets) do
+		if tileset.image then
+			local image = self._map._images[tileset.image]
+			self._spriteBatches[image] = love.graphics.newSpriteBatch(image)
+		end
+	end
+	for _, gid, _, _, pixelX, pixelY in self:getTiles() do
+		local tileset = self._map:getTileset(gid)
+		if tileset.image then
+			local image = self._map._images[tileset.image]
+			local quad = tileset:_getQuad(gid - tileset.firstgid)
+			self._sprites[pixelX .. ' ' .. pixelY] = self._spriteBatches[image]:add(quad, pixelX, pixelY)
+		end
+	end
+end
+
+function Layer.tilelayer:draw()
+	love.graphics.push()
+	love.graphics.translate(self.offsetx, self.offsety)
+	-- draw the sprite batches
+	for _, spriteBatch in pairs(self._spriteBatches) do
+		love.graphics.draw(spriteBatch)
+	end
+	love.graphics.pop()
+end
 
 function Layer.tilelayer:getGridBounds()
 	if self.chunks then
@@ -171,7 +222,6 @@ function Layer.tilelayer:setTileAtGridPosition(x, y, gid)
 							 and y < chunk.y + chunk.height
 			if pointInChunk then
 				local index = coordinatesToIndex(x - chunk.x, y - chunk.y, chunk.width)
-				print(index)
 				chunk.data[index] = gid
 			end
 		end
@@ -233,7 +283,7 @@ Layer.imagelayer = setmetatable({}, Layer.base)
 Layer.imagelayer.__index = Layer.imagelayer
 
 function Layer.imagelayer:draw()
-	love.graphics.draw(self._map._images[self.image])
+	love.graphics.draw(self._map._images[self.image], self.offsetx, self.offsety)
 end
 
 -- Represents a layer group in an exported Tiled map.
@@ -253,12 +303,7 @@ Layer.group.getLayer = getLayer
 
 function Layer.group:draw()
 	for _, layer in ipairs(self.layers) do
-		if layer.visible and layer.draw then
-			love.graphics.push()
-			love.graphics.translate(layer.offsetx, layer.offsety)
-			layer:draw()
-			love.graphics.pop()
-		end
+		if layer.visible and layer.draw then layer:draw() end
 	end
 end
 
@@ -293,6 +338,7 @@ end
 function Map:_initTilesets()
 	for _, tileset in ipairs(self.tilesets) do
 		setmetatable(tileset, Tileset)
+		tileset:_init(self)
 	end
 	setmetatable(self.tilesets, getByNameMetatable)
 end
@@ -361,12 +407,7 @@ end
 function Map:draw()
 	self:drawBackground()
 	for _, layer in ipairs(self.layers) do
-		if layer.visible and layer.draw then
-			love.graphics.push()
-			love.graphics.translate(layer.offsetx, layer.offsety)
-			layer:draw()
-			love.graphics.pop()
-		end
+		if layer.visible and layer.draw then layer:draw() end
 	end
 end
 
