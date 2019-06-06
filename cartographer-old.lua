@@ -332,6 +332,7 @@ function Layer.tilelayer:getTiles()
 end
 
 function Layer.tilelayer:getTileAt(x, y)
+	local gid
 	if self.chunks then
 		for _, chunk in ipairs(self.chunks) do
 			local pointInChunk = x >= chunk.x
@@ -339,12 +340,14 @@ function Layer.tilelayer:getTileAt(x, y)
 							 and y >= chunk.y
 							 and y < chunk.y + chunk.height
 			if pointInChunk then
-				return chunk.data[coordinatesToIndex(x - chunk.x, y - chunk.y, chunk.width)]
+				gid = chunk.data[coordinatesToIndex(x - chunk.x, y - chunk.y, chunk.width)]
 			end
 		end
 	else
-		return self.data[coordinatesToIndex(x, y, self.width)]
+		gid = self.data[coordinatesToIndex(x, y, self.width)]
 	end
+	if gid == 0 then return false end
+	return gid
 end
 
 function Layer.tilelayer:getBounds()
