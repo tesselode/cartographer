@@ -125,6 +125,7 @@ function Layer.tilelayer:getPixelBounds()
 end
 
 function Layer.tilelayer:getTileAtGridPosition(x, y)
+	local gid
 	if self.chunks then
 		for _, chunk in ipairs(self.chunks) do
 			local pointInChunk = x >= chunk.x
@@ -132,16 +133,41 @@ function Layer.tilelayer:getTileAtGridPosition(x, y)
 							 and y >= chunk.y
 							 and y < chunk.y + chunk.height
 			if pointInChunk then
-				return chunk.data[coordinatesToIndex(x - chunk.x, y - chunk.y, chunk.width)]
+				gid = chunk.data[coordinatesToIndex(x - chunk.x, y - chunk.y, chunk.width)]
 			end
 		end
 	else
-		return self.data[coordinatesToIndex(x, y, self.width)]
+		gid = self.data[coordinatesToIndex(x, y, self.width)]
+	end
+	if gid == 0 then return false end
+	return gid
+end
+
+function Layer.tilelayer:setTileAtGridPosition(x, y, gid)
+	if self.chunks then
+		for _, chunk in ipairs(self.chunks) do
+			local pointInChunk = x >= chunk.x
+							 and x < chunk.x + chunk.width
+							 and y >= chunk.y
+							 and y < chunk.y + chunk.height
+			if pointInChunk then
+				local index = coordinatesToIndex(x - chunk.x, y - chunk.y, chunk.width)
+				print(index)
+				chunk.data[index] = gid
+			end
+		end
+	else
+		self.data[coordinatesToIndex(x, y, self.width)] = gid
 	end
 end
 
 function Layer.tilelayer:getTileAtPixelPosition(x, y)
 	return self:getTileAtGridPosition(self:pixelToGrid(x, y))
+end
+
+function Layer.tilelayer:setTileAtPixelPosition(gridX, gridY, gid)
+	local pixelX, pixelY = self:pixelToGrid(gridX, gridY)
+	return self:setTileAtGridPosition(pixelX, pixelY, gid)
 end
 
 function Layer.tilelayer:_getTileAtIndex(index)
@@ -150,7 +176,7 @@ function Layer.tilelayer:_getTileAtIndex(index)
 		for _, chunk in ipairs(self.chunks) do
 			if index <= #chunk.data then
 				local gid = chunk.data[index]
-				local gridX, gridY = indexToCoordinates(index, self.width)
+				local gridX, gridY = indexToCoordinates(index, chunk.width)
 				gridX, gridY = gridX + chunk.x, gridY + chunk.y
 				local pixelX, pixelY = self:gridToPixel(gridX, gridY)
 				return gid, gridX, gridY, pixelX, pixelY
