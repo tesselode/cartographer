@@ -99,7 +99,12 @@ function Tileset:setTileProperty(id, propertyName, propertyValue)
 end
 
 -- Gets the quad of the tile with the given local ID.
-function Tileset:_getQuad(id)
+function Tileset:_getQuad(id, frame)
+	frame = frame or 1
+	local tile = self:getTile(id)
+	if tile and tile.animation then
+		id = tile.animation[frame].tileid
+	end
 	local image = self._map._images[self.image]
 	local x, y = indexToCoordinates(id + 1, self._tilesPerRow)
 	return love.graphics.newQuad(
@@ -139,23 +144,49 @@ end
 Layer.tilelayer = setmetatable({}, Layer.base)
 Layer.tilelayer.__index = Layer.tilelayer
 
-function Layer.tilelayer:_init(map)
-	Layer.base._init(self, map)
+function Layer.tilelayer:_initAnimations()
+	self._animations = {}
+	for _, tileset in ipairs(self._map.tilesets) do
+		self._animations[tileset] = {}
+		for _, tile in ipairs(tileset.tiles) do
+			if tile.animation then
+				local gid = tileset.firstgid + tile.id
+				self._animations[tileset][gid] = {
+					frames = tile.animation,
+					currentFrame = 1,
+					timer = tile.animation[1].duration,
+				}
+			end
+		end
+	end
+end
+
+function Layer.tilelayer:_createSpriteBatches()
 	self._spriteBatches = {}
-	self._sprites = {}
-	self._unbatchedItems = {}
 	for _, tileset in ipairs(self._map.tilesets) do
 		if tileset.image then
 			local image = self._map._images[tileset.image]
-			self._spriteBatches[image] = love.graphics.newSpriteBatch(image)
+			self._spriteBatches[tileset] = love.graphics.newSpriteBatch(image)
 		end
 	end
+end
+
+function Layer.tilelayer:_init(map)
+	Layer.base._init(self, map)
+	self:_initAnimations()
+	self:_createSpriteBatches()
+	self._sprites = {}
+	self._unbatchedItems = {}
 	for _, gid, _, _, pixelX, pixelY in self:getTiles() do
 		local tileset = self._map:getTileset(gid)
 		if tileset.image then
-			local image = self._map._images[tileset.image]
 			local quad = tileset:_getQuad(gid - tileset.firstgid)
-			self._sprites[pixelX .. ' ' .. pixelY] = self._spriteBatches[image]:add(quad, pixelX, pixelY)
+			table.insert(self._sprites, {
+				tileGid = gid,
+				pixelX = pixelX,
+				pixelY = pixelY,
+				id = self._spriteBatches[tileset]:add(quad, pixelX, pixelY),
+			})
 		else
 			-- remember which items aren't part of a sprite batch
 			-- so we can iterate through them in layer.draw
@@ -273,6 +304,37 @@ function Layer.tilelayer:getTiles()
 	return self._tileIterator, self, 0
 end
 
+function Layer.tilelayer:_updateAnimations(dt)
+	for tileset, tilesetAnimations in pairs(self._animations) do
+		for gid, animation in pairs(tilesetAnimations) do
+			-- decrement the animation timer
+			animation.timer = animation.timer - 1000 * dt
+			while animation.timer <= 0 do
+				-- move to the next frame of animation
+				animation.currentFrame = animation.currentFrame + 1
+				if animation.currentFrame > #animation.frames then
+					animation.currentFrame = 1
+				end
+				-- increment the animation timer by the duration of the new frame
+				animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
+				-- update sprites
+				if tileset.image then
+					local quad = tileset:_getQuad(gid - tileset.firstgid, animation.currentFrame)
+					for _, sprite in ipairs(self._sprites) do
+						if sprite.tileGid == gid then
+							self._spriteBatches[tileset]:set(sprite.id, quad, sprite.pixelX, sprite.pixelY)
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+function Layer.tilelayer:update(dt)
+	self:_updateAnimations(dt)
+end
+
 function Layer.tilelayer:draw()
 	love.graphics.push()
 	love.graphics.translate(self.offsetx, self.offsety)
@@ -314,6 +376,12 @@ function Layer.group:_init(map)
 end
 
 Layer.group.getLayer = getLayer
+
+function Layer.group:update(dt)
+	for _, layer in ipairs(self.layers) do
+		if layer.update then layer:update(dt) end
+	end
+end
 
 function Layer.group:draw()
 	for _, layer in ipairs(self.layers) do
@@ -403,6 +471,12 @@ function Map:setTileProperty(gid, propertyName, propertyValue)
 end
 
 Map.getLayer = getLayer
+
+function Map:update(dt)
+	for _, layer in ipairs(self.layers) do
+		if layer.update then layer:update(dt) end
+	end
+end
 
 function Map:drawBackground()
 	if self.backgroundcolor then
