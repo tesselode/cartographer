@@ -57,64 +57,6 @@ local function getLayer(self, ...)
 	return layer
 end
 
--- Represents a tileset in an exported Tiled map.
-local Tileset = {}
-Tileset.__index = Tileset
-
-function Tileset:_init(map)
-	self._map = map
-	if self.image then
-		local image = self._map._images[self.image]
-		-- save the number of tiles per row so we don't have to calculate it later
-		self._tilesPerRow = math.floor(image:getWidth() / (self.tilewidth + self.spacing))
-	end
-end
-
--- Gets the info table for a tile with the given local ID, if it exists.
-function Tileset:getTile(id)
-	for _, tile in ipairs(self.tiles) do
-		if tile.id == id then return tile end
-	end
-end
-
--- Gets the value of the specified property on the tile
--- with the given local ID, if it exists.
-function Tileset:getTileProperty(id, propertyName)
-	local tile = self:getTile(id)
-	if not tile then return end
-	if not tile.properties then return end
-	return tile.properties[propertyName]
-end
-
--- Sets the value of the specified property on the tile
--- with the given local ID.
-function Tileset:setTileProperty(id, propertyName, propertyValue)
-	local tile = self:getTile(id)
-	if not tile then
-		tile = {id = id}
-		table.insert(self.tiles, tile)
-	end
-	tile.properties = tile.properties or {}
-	tile.properties[propertyName] = propertyValue
-end
-
--- Gets the quad of the tile with the given local ID.
-function Tileset:_getQuad(id, frame)
-	frame = frame or 1
-	local tile = self:getTile(id)
-	if tile and tile.animation then
-		id = tile.animation[frame].tileid
-	end
-	local image = self._map._images[self.image]
-	local x, y = indexToCoordinates(id + 1, self._tilesPerRow)
-	return love.graphics.newQuad(
-		x * (self.tilewidth + self.spacing),
-		y * (self.tileheight + self.spacing),
-		self.tilewidth, self.tileheight,
-		image:getWidth(), image:getHeight()
-	)
-end
-
 local Layer = {}
 
 -- A common class for all layer types.
@@ -180,7 +122,7 @@ function Layer.tilelayer:_init(map)
 	for _, gid, _, _, pixelX, pixelY in self:getTiles() do
 		local tileset = self._map:getTileset(gid)
 		if tileset.image then
-			local quad = tileset:_getQuad(gid - tileset.firstgid)
+			local quad = self._map:_getTileQuad(gid)
 			table.insert(self._sprites, {
 				tileGid = gid,
 				pixelX = pixelX,
@@ -319,7 +261,7 @@ function Layer.tilelayer:_updateAnimations(dt)
 				animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
 				-- update sprites
 				if tileset.image then
-					local quad = tileset:_getQuad(gid - tileset.firstgid, animation.currentFrame)
+					local quad = self._map:_getTileQuad(gid, animation.currentFrame)
 					for _, sprite in ipairs(self._sprites) do
 						if sprite.tileGid == gid then
 							self._spriteBatches[tileset]:set(sprite.id, quad, sprite.pixelX, sprite.pixelY)
@@ -417,14 +359,6 @@ function Map:_loadImages()
 	end
 end
 
-function Map:_initTilesets()
-	for _, tileset in ipairs(self.tilesets) do
-		setmetatable(tileset, Tileset)
-		tileset:_init(self)
-	end
-	setmetatable(self.tilesets, getByNameMetatable)
-end
-
 function Map:_initLayers()
 	for _, layer in ipairs(self.layers) do
 		setmetatable(layer, Layer[layer.type])
@@ -436,8 +370,29 @@ end
 function Map:_init(path)
 	self.dir = splitPath(path)
 	self:_loadImages()
-	self:_initTilesets()
+	setmetatable(self.tilesets, getByNameMetatable)
 	self:_initLayers()
+end
+
+-- Gets the quad of the tile with the given local ID.
+function Map:_getTileQuad(gid, frame)
+	frame = frame or 1
+	local tileset = self:getTileset(gid)
+	if not tileset.image then return false end
+	local id = gid - tileset.firstgid
+	local tile = self:getTile(gid)
+	if tile and tile.animation then
+		id = tile.animation[frame].tileid
+	end
+	local image = self._images[tileset.image]
+	local gridWidth = math.floor(image:getWidth() / (tileset.tilewidth + tileset.spacing))
+	local x, y = indexToCoordinates(id + 1, gridWidth)
+	return love.graphics.newQuad(
+		x * (tileset.tilewidth + tileset.spacing),
+		y * (tileset.tileheight + tileset.spacing),
+		tileset.tilewidth, tileset.tileheight,
+		image:getWidth(), image:getHeight()
+	)
 end
 
 -- Gets the tileset that has the tile with the given global ID.
@@ -453,21 +408,33 @@ end
 -- Gets the data table for the tile with the given global ID, if it exists.
 function Map:getTile(gid)
 	local tileset = self:getTileset(gid)
-	return tileset:getTile(gid - tileset.firstgid)
+	for _, tile in ipairs(tileset.tiles) do
+		if tileset.firstgid + tile.id == gid then
+			return tile
+		end
+	end
 end
 
 -- Gets the value of the specified property on the tile
 -- with the given global ID, if it exists.
 function Map:getTileProperty(gid, propertyName)
-	local tileset = self:getTileset(gid)
-	return tileset:getTileProperty(gid - tileset.firstgid, propertyName)
+	local tile = self:getTile(gid)
+	if not tile then return end
+	if not tile.properties then return end
+	return tile.properties[propertyName]
 end
 
 -- Sets the value of the specified property on the tile
 -- with the given global ID.
 function Map:setTileProperty(gid, propertyName, propertyValue)
-	local tileset = self:getTileset(gid)
-	return tileset:setTileProperty(gid - tileset.firstgid, propertyName, propertyValue)
+	local tile = self:getTile(gid)
+	if not tile then
+		local tileset = self:getTileset(gid)
+		tile = {id = gid - tileset.firstgid}
+		table.insert(tileset.tiles, tile)
+	end
+	tile.properties = tile.properties or {}
+	tile.properties[propertyName] = propertyValue
 end
 
 Map.getLayer = getLayer
