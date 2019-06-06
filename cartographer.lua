@@ -1,5 +1,25 @@
 local cartographer = {}
 
+-- splits a path into directory, file (with filename), and just filename
+-- i really only need the directory
+-- https://stackoverflow.com/a/12191225
+local function splitPath(path)
+    return string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
+end
+
+-- joins two paths together into a reasonable path that Lua can use.
+-- handles going up a directory using ..
+-- https://github.com/karai17/Simple-Tiled-Implementation/blob/master/sti/utils.lua#L5
+local function formatPath(path)
+	local npGen1, npGen2 = '[^SEP]+SEP%.%.SEP?', 'SEP+%.?SEP'
+	local npPat1, npPat2 = npGen1:gsub('SEP', '/'), npGen2:gsub('SEP', '/')
+	local k
+	repeat path, k = path:gsub(npPat2, '/') until k == 0
+	repeat path, k = path:gsub(npPat1, '') until k == 0
+	if path == '' then path = '.' end
+	return path
+end
+
 -- given a grid with w items per row, return the column and row of the nth item
 -- (going from left to right, top to bottom)
 -- https://stackoverflow.com/a/9816217
@@ -10,7 +30,6 @@ end
 local function coordinatesToIndex(x, y, w)
 	return x + w * y + 1
 end
-
 
 local getByNameMetatable = {
 	__index = function(self, key)
@@ -77,12 +96,12 @@ Layer.base = {}
 Layer.base.__index = Layer.base
 
 function Layer.base:_init(map)
-	self.map = map
+	self._map = map
 end
 
 -- Converts grid coordinates to pixel coordinates for this layer.
 function Layer.base:gridToPixel(x, y)
-	x, y = x * self.map.tilewidth, y * self.map.tileheight
+	x, y = x * self._map.tilewidth, y * self._map.tileheight
 	x, y = x + self.offsetx, y + self.offsety
 	return x, y
 end
@@ -90,7 +109,7 @@ end
 -- Converts pixel coordinates for this layer to grid coordinates.
 function Layer.base:pixelToGrid(x, y)
 	x, y = x - self.offsetx, y - self.offsety
-	x, y = x / self.map.tilewidth, y / self.map.tileheight
+	x, y = x / self._map.tilewidth, y / self._map.tileheight
 	x, y = math.floor(x), math.floor(y)
 	return x, y
 end
@@ -213,6 +232,10 @@ Layer.objectgroup.__index = Layer.objectgroup
 Layer.imagelayer = setmetatable({}, Layer.base)
 Layer.imagelayer.__index = Layer.imagelayer
 
+function Layer.imagelayer:draw()
+	love.graphics.draw(self._map._images[self.image])
+end
+
 -- Represents a layer group in an exported Tiled map.
 Layer.group = setmetatable({}, Layer.base)
 Layer.group.__index = Layer.group
@@ -228,8 +251,44 @@ end
 
 Layer.group.getLayer = getLayer
 
+function Layer.group:draw()
+	for _, layer in ipairs(self.layers) do
+		if layer.visible and layer.draw then
+			love.graphics.push()
+			love.graphics.translate(layer.offsetx, layer.offsety)
+			layer:draw()
+			love.graphics.pop()
+		end
+	end
+end
+
 local Map = {}
 Map.__index = Map
+
+-- Loads an image if it hasn't already been loaded yet.
+-- Images are stored in map._images, and the key is the relative
+-- path to the image.
+function Map:_loadImage(relativeImagePath)
+	if self._images[relativeImagePath] then return end
+	local imagePath = formatPath(self.dir .. relativeImagePath)
+	self._images[relativeImagePath] = love.graphics.newImage(imagePath)
+end
+
+-- Loads all of the images used by the map.
+function Map:_loadImages()
+	self._images = {}
+	for _, tileset in ipairs(self.tilesets) do
+		if tileset.image then self:_loadImage(tileset.image) end
+		for _, tile in ipairs(tileset.tiles) do
+			if tile.image then self:_loadImage(tile.image) end
+		end
+	end
+	for _, layer in ipairs(self.layers) do
+		if layer.type == 'imagelayer' then
+			self:_loadImage(layer.image)
+		end
+	end
+end
 
 function Map:_initTilesets()
 	for _, tileset in ipairs(self.tilesets) do
@@ -246,7 +305,9 @@ function Map:_initLayers()
 	setmetatable(self.layers, getByNameMetatable)
 end
 
-function Map:_init()
+function Map:_init(path)
+	self.dir = splitPath(path)
+	self:_loadImages()
 	self:_initTilesets()
 	self:_initLayers()
 end
@@ -283,11 +344,37 @@ end
 
 Map.getLayer = getLayer
 
+function Map:drawBackground()
+	if self.backgroundcolor then
+		love.graphics.push 'all'
+		local r = self.backgroundcolor[1] / 255
+		local g = self.backgroundcolor[2] / 255
+		local b = self.backgroundcolor[3] / 255
+		love.graphics.setColor(r, g, b)
+		love.graphics.rectangle('fill', 0, 0,
+			self.width * self.tilewidth,
+			self.height * self.tileheight)
+		love.graphics.pop()
+	end
+end
+
+function Map:draw()
+	self:drawBackground()
+	for _, layer in ipairs(self.layers) do
+		if layer.visible and layer.draw then
+			love.graphics.push()
+			love.graphics.translate(layer.offsetx, layer.offsety)
+			layer:draw()
+			love.graphics.pop()
+		end
+	end
+end
+
 -- Loads a Tiled map from a lua file.
 function cartographer.load(path)
 	if not path then error('No map path provided', 2) end
 	local map = setmetatable(love.filesystem.load(path)(), Map)
-	map:_init()
+	map:_init(path)
 	return map
 end
 
