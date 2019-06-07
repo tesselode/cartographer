@@ -119,41 +119,94 @@ function Layer.itemlayer:_createSpriteBatches()
 	end
 end
 
+--[[
+	A note on how sprites are stored
+	--------------------------------
+	Each sprite has the following fields:
+	- tileGid (number)
+	- x (number)
+	- y (number)
+	- spriteBatch (spriteBatch or nil)
+	- id (number or nil)
+
+	Normally, I'd represent a list of sprites like this:
+
+	sprites = {
+		{
+			tileGid = tileGid,
+			x = x,
+			...
+		},
+		{
+			tileGid = tileGid,
+			x = x,
+			...
+		},
+		...
+	}
+
+	However, since large maps have a lot of sprites, all of these
+	tables use a lot of memory. So instead, since I know that every
+	sprite has the same fields, I organize them like this:
+
+	sprites = {
+		exists = {sprite1Exists, sprite2Exists, ...},
+		tileGid = {sprite1TileGid, sprite2TileGid, ...},
+		x = {sprite1X, sprite2X, ...},
+		...
+	}
+
+	It's a little awkward to work with, but it means that I only ever
+	have 7 tables total dedicated to sprites for any given item layer.
+
+	The biggest concern is that you have to insert and remove from all of the
+	tables at the same time, otherwise the data for each sprite will get
+	misaligned.
+
+	Note: the exists field isn't really necessary, but I'd feel weird using
+	the x/y/tileGid fields as indicators that a sprite exists.
+]]
+
 function Layer.itemlayer:_setSprite(x, y, gid)
 	-- if the gid is 0 (empty), remove the sprite at (x, y)
 	-- (if it exists)
 	if gid == 0 then
-		for i = #self._sprites, 1, -1 do
-			local sprite = self._sprites[i]
-			if sprite.x == x and sprite.y == y then
-				if sprite.spriteBatch then
-					sprite.spriteBatch:set(sprite.id, 0, 0, 0, 0, 0)
+		for i = #self._sprites.exists, 1, -1 do
+			if self._sprites.x[i] == x and self._sprites.y[i] == y then
+				if self._sprites.spriteBatch[i] then
+					self._sprites.spriteBatch[i]:set(self._sprites.id[i], 0, 0, 0, 0, 0)
 				end
-				table.remove(self._sprites, i)
+				table.remove(self._sprites.exists, i)
+				table.remove(self._sprites.tileGid, i)
+				table.remove(self._sprites.x, i)
+				table.remove(self._sprites.y, i)
+				table.remove(self._sprites.spriteBatch, i)
+				table.remove(self._sprites.id, i)
 				break
 			end
 		end
 		return
 	end
-	local sprite
+	local index
 	-- check if a sprite already exists at (x, y)
-	for _, s in ipairs(self._sprites) do
-		if s.x == x and s.y == y then
-			sprite = s
+	for i = 1, #self._sprites.exists do
+		if self._sprites.x[i] == x and self._sprites.y[i] == y then
+			index = i
 			break
 		end
 	end
 	-- if the sprite doesn't exist, create a new one and add it to the sprite batch
-	if not sprite then
-		sprite = {
-			tileGid = gid,
-			x = x,
-			y = y,
-		}
-		table.insert(self._sprites, sprite)
+	if not index then
+		table.insert(self._sprites.exists, true)
+		table.insert(self._sprites.tileGid, gid)
+		table.insert(self._sprites.x, x)
+		table.insert(self._sprites.y, y)
+		table.insert(self._sprites.spriteBatch, false)
+		table.insert(self._sprites.id, false)
+		index = #self._sprites.exists
 	end
 	-- update the sprite's tile GID
-	sprite.tileGid = gid
+	self._sprites.tileGid[index] = gid
 	local tileset = self._map:getTileset(gid)
 	-- if the sprite should be batched...
 	if tileset.image then
@@ -161,20 +214,20 @@ function Layer.itemlayer:_setSprite(x, y, gid)
 		local animation = self._animations[gid]
 		local quad = self._map:_getTileQuad(gid, animation and animation.currentFrame)
 		-- if the sprite isn't batched, add it to the sprite batch
-		if not sprite.spriteBatch then
-			sprite.spriteBatch = self._spriteBatches[tileset]
-			sprite.id = self._spriteBatches[tileset]:add(quad, x, y)
+		if not self._sprites.spriteBatch[index] then
+			self._sprites.spriteBatch[index] = self._spriteBatches[tileset]
+			self._sprites.id[index] = self._spriteBatches[tileset]:add(quad, x, y)
 		-- otherwise, just update the sprite batch
 		else
-			sprite.spriteBatch:set(sprite.id, quad, x, y)
+			self._sprites.spriteBatch[index]:set(self._sprites.id[index], quad, x, y)
 		end
 	-- otherwise...
 	else
 		-- if the sprite is batched, remove it from the sprite batch
-		if sprite.spriteBatch then
-			sprite.spriteBatch:set(sprite.id, 0, 0, 0, 0, 0)
-			sprite.spriteBatch = nil
-			sprite.id = nil
+		if self._sprites.spriteBatch[index] then
+			self._sprites.spriteBatch[index]:set(self._sprites.id[index], 0, 0, 0, 0, 0)
+			self._sprites.spriteBatch[index] = false
+			self._sprites.id[index] = false
 		end
 	end
 end
@@ -183,7 +236,14 @@ function Layer.itemlayer:_init(map)
 	Layer.base._init(self, map)
 	self:_initAnimations()
 	self:_createSpriteBatches()
-	self._sprites = {}
+	self._sprites = {
+		exists = {},
+		tileGid = {},
+		x = {},
+		y = {},
+		spriteBatch = {},
+		id = {},
+	}
 end
 
 function Layer.itemlayer:_updateAnimations(dt)
@@ -202,9 +262,9 @@ function Layer.itemlayer:_updateAnimations(dt)
 			local tileset = self._map:getTileset(gid)
 			if tileset.image then
 				local quad = self._map:_getTileQuad(gid, animation.currentFrame)
-				for _, sprite in ipairs(self._sprites) do
-					if sprite.tileGid == gid then
-						sprite.spriteBatch:set(sprite.id, quad, sprite.x, sprite.y)
+				for i = 1, #self._sprites.exists do
+					if self._sprites.tileGid[i] == gid then
+						self._sprites.spriteBatch[i]:set(self._sprites.id[i], quad, self._sprites.x[i], self._sprites.y[i])
 					end
 				end
 			end
@@ -224,11 +284,11 @@ function Layer.itemlayer:draw()
 		love.graphics.draw(spriteBatch)
 	end
 	-- draw the unbatched sprites
-	for _, sprite in ipairs(self._sprites) do
-		if not sprite.spriteBatch then
-			local animation = self._animations[sprite.tileGid]
-			local image = self._map:_getTileImage(sprite.tileGid, animation and animation.currentFrame)
-			love.graphics.draw(image, sprite.x, sprite.y)
+	for i = 1, #self._sprites.exists do
+		if not self._sprites.spriteBatch[i] then
+			local animation = self._animations[self._sprites.tileGid[i]]
+			local image = self._map:_getTileImage(self._sprites.tileGid[i], animation and animation.currentFrame)
+			love.graphics.draw(image, self._sprites.x[i], self._sprites.y[i])
 		end
 	end
 	love.graphics.pop()
