@@ -89,11 +89,10 @@ Layer.tilelayer.__index = Layer.tilelayer
 function Layer.tilelayer:_initAnimations()
 	self._animations = {}
 	for _, tileset in ipairs(self._map.tilesets) do
-		self._animations[tileset] = {}
 		for _, tile in ipairs(tileset.tiles) do
 			if tile.animation then
 				local gid = tileset.firstgid + tile.id
-				self._animations[tileset][gid] = {
+				self._animations[gid] = {
 					frames = tile.animation,
 					currentFrame = 1,
 					timer = tile.animation[1].duration,
@@ -251,25 +250,24 @@ function Layer.tilelayer:getTiles()
 end
 
 function Layer.tilelayer:_updateAnimations(dt)
-	for tileset, tilesetAnimations in pairs(self._animations) do
-		for gid, animation in pairs(tilesetAnimations) do
-			-- decrement the animation timer
-			animation.timer = animation.timer - 1000 * dt
-			while animation.timer <= 0 do
-				-- move to the next frame of animation
-				animation.currentFrame = animation.currentFrame + 1
-				if animation.currentFrame > #animation.frames then
-					animation.currentFrame = 1
-				end
-				-- increment the animation timer by the duration of the new frame
-				animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
-				-- update sprites
-				if tileset.image then
-					local quad = self._map:_getTileQuad(gid, animation.currentFrame)
-					for _, sprite in ipairs(self._sprites) do
-						if sprite.tileGid == gid then
-							self._spriteBatches[tileset]:set(sprite.id, quad, sprite.pixelX, sprite.pixelY)
-						end
+	for gid, animation in pairs(self._animations) do
+		-- decrement the animation timer
+		animation.timer = animation.timer - 1000 * dt
+		while animation.timer <= 0 do
+			-- move to the next frame of animation
+			animation.currentFrame = animation.currentFrame + 1
+			if animation.currentFrame > #animation.frames then
+				animation.currentFrame = 1
+			end
+			-- increment the animation timer by the duration of the new frame
+			animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
+			-- update sprites
+			local tileset = self._map:getTileset(gid)
+			if tileset.image then
+				local quad = self._map:_getTileQuad(gid, animation.currentFrame)
+				for _, sprite in ipairs(self._sprites) do
+					if sprite.tileGid == gid then
+						self._spriteBatches[tileset]:set(sprite.id, quad, sprite.pixelX, sprite.pixelY)
 					end
 				end
 			end
