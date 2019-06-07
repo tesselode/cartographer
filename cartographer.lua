@@ -82,11 +82,17 @@ function Layer.base:pixelToGrid(x, y)
 	return x, y
 end
 
--- Represents a tile layer in an exported Tiled map.
-Layer.tilelayer = setmetatable({}, Layer.base)
-Layer.tilelayer.__index = Layer.tilelayer
+--[[
+	Represents any layer type that can contain tiles
+	(currently tile layers and object layers).
+	There's no layer type in Tiled called "item layers",
+	it's just a parent class to share code between
+	tile layers and object layers.
+]]
+Layer.itemlayer = setmetatable({}, Layer.base)
+Layer.itemlayer.__index = Layer.itemlayer
 
-function Layer.tilelayer:_initAnimations()
+function Layer.itemlayer:_initAnimations()
 	self._animations = {}
 	for _, tileset in ipairs(self._map.tilesets) do
 		for _, tile in ipairs(tileset.tiles) do
@@ -103,7 +109,7 @@ function Layer.tilelayer:_initAnimations()
 	end
 end
 
-function Layer.tilelayer:_createSpriteBatches()
+function Layer.itemlayer:_createSpriteBatches()
 	self._spriteBatches = {}
 	for _, tileset in ipairs(self._map.tilesets) do
 		if tileset.image then
@@ -113,7 +119,7 @@ function Layer.tilelayer:_createSpriteBatches()
 	end
 end
 
-function Layer.tilelayer:_setSprite(x, y, gid)
+function Layer.itemlayer:_setSprite(x, y, gid)
 	-- if the gid is 0 (empty), remove the sprite at (x, y)
 	-- (if it exists)
 	if gid == 0 then
@@ -173,11 +179,67 @@ function Layer.tilelayer:_setSprite(x, y, gid)
 	end
 end
 
-function Layer.tilelayer:_init(map)
+function Layer.itemlayer:_init(map)
 	Layer.base._init(self, map)
 	self:_initAnimations()
 	self:_createSpriteBatches()
 	self._sprites = {}
+end
+
+function Layer.itemlayer:_updateAnimations(dt)
+	for gid, animation in pairs(self._animations) do
+		-- decrement the animation timer
+		animation.timer = animation.timer - 1000 * dt
+		while animation.timer <= 0 do
+			-- move to the next frame of animation
+			animation.currentFrame = animation.currentFrame + 1
+			if animation.currentFrame > #animation.frames then
+				animation.currentFrame = 1
+			end
+			-- increment the animation timer by the duration of the new frame
+			animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
+			-- update sprites
+			local tileset = self._map:getTileset(gid)
+			if tileset.image then
+				local quad = self._map:_getTileQuad(gid, animation.currentFrame)
+				for _, sprite in ipairs(self._sprites) do
+					if sprite.tileGid == gid then
+						sprite.spriteBatch:set(sprite.id, quad, sprite.x, sprite.y)
+					end
+				end
+			end
+		end
+	end
+end
+
+function Layer.itemlayer:update(dt)
+	self:_updateAnimations(dt)
+end
+
+function Layer.itemlayer:draw()
+	love.graphics.push()
+	love.graphics.translate(self.offsetx, self.offsety)
+	-- draw the sprite batches
+	for _, spriteBatch in pairs(self._spriteBatches) do
+		love.graphics.draw(spriteBatch)
+	end
+	-- draw the unbatched sprites
+	for _, sprite in ipairs(self._sprites) do
+		if not sprite.spriteBatch then
+			local animation = self._animations[sprite.tileGid]
+			local image = self._map:_getTileImage(sprite.tileGid, animation and animation.currentFrame)
+			love.graphics.draw(image, sprite.x, sprite.y)
+		end
+	end
+	love.graphics.pop()
+end
+
+-- Represents a tile layer in an exported Tiled map.
+Layer.tilelayer = setmetatable({}, Layer.itemlayer)
+Layer.tilelayer.__index = Layer.tilelayer
+
+function Layer.tilelayer:_init(map)
+	Layer.itemlayer._init(self, map)
 	for _, gid, _, _, pixelX, pixelY in self:getTiles() do
 		self:_setSprite(pixelX, pixelY, gid)
 	end
@@ -290,57 +352,18 @@ function Layer.tilelayer:getTiles()
 	return self._tileIterator, self, 0
 end
 
-function Layer.tilelayer:_updateAnimations(dt)
-	for gid, animation in pairs(self._animations) do
-		-- decrement the animation timer
-		animation.timer = animation.timer - 1000 * dt
-		while animation.timer <= 0 do
-			-- move to the next frame of animation
-			animation.currentFrame = animation.currentFrame + 1
-			if animation.currentFrame > #animation.frames then
-				animation.currentFrame = 1
-			end
-			-- increment the animation timer by the duration of the new frame
-			animation.timer = animation.timer + animation.frames[animation.currentFrame].duration
-			-- update sprites
-			local tileset = self._map:getTileset(gid)
-			if tileset.image then
-				local quad = self._map:_getTileQuad(gid, animation.currentFrame)
-				for _, sprite in ipairs(self._sprites) do
-					if sprite.tileGid == gid then
-						sprite.spriteBatch:set(sprite.id, quad, sprite.x, sprite.y)
-					end
-				end
-			end
-		end
-	end
-end
-
-function Layer.tilelayer:update(dt)
-	self:_updateAnimations(dt)
-end
-
-function Layer.tilelayer:draw()
-	love.graphics.push()
-	love.graphics.translate(self.offsetx, self.offsety)
-	-- draw the sprite batches
-	for _, spriteBatch in pairs(self._spriteBatches) do
-		love.graphics.draw(spriteBatch)
-	end
-	-- draw the unbatched sprites
-	for _, sprite in ipairs(self._sprites) do
-		if not sprite.spriteBatch then
-			local animation = self._animations[sprite.tileGid]
-			local image = self._map:_getTileImage(sprite.tileGid, animation and animation.currentFrame)
-			love.graphics.draw(image, sprite.x, sprite.y)
-		end
-	end
-	love.graphics.pop()
-end
-
 -- Represents an object layer in an exported Tiled map.
-Layer.objectgroup = setmetatable({}, Layer.base)
+Layer.objectgroup = setmetatable({}, Layer.itemlayer)
 Layer.objectgroup.__index = Layer.objectgroup
+
+function Layer.objectgroup:_init(map)
+	Layer.itemlayer._init(self, map)
+	for _, object in ipairs(self.objects) do
+		if object.gid and object.visible then
+			self:_setSprite(object.x, object.y - object.height, object.gid)
+		end
+	end
+end
 
 -- Represents an image layer in an exported Tiled map.
 Layer.imagelayer = setmetatable({}, Layer.base)
