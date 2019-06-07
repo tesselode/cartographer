@@ -326,15 +326,9 @@ function Layer.tilelayer:draw()
 	end
 	-- draw the items that aren't part of a sprite batch
 	for _, item in ipairs(self._unbatchedItems) do
-		local tile
 		local animation = self._animations[item.gid]
-		if animation then
-			local gid = animation.tileset.firstgid + animation.frames[animation.currentFrame].tileid
-			tile = self._map:getTile(gid)
-		else
-			tile = self._map:getTile(item.gid)
-		end
-		love.graphics.draw(self._map._images[tile.image], item.pixelX, item.pixelY)
+		local image = self._map:_getTileImage(item.gid, animation and animation.currentFrame)
+		love.graphics.draw(image, item.pixelX, item.pixelY)
 	end
 	love.graphics.pop()
 end
@@ -421,7 +415,8 @@ function Map:_init(path)
 	self:_initLayers()
 end
 
--- Gets the quad of the tile with the given local ID.
+-- Gets the quad of the tile with the given global ID.
+-- Returns false if the tileset is an image collection.
 function Map:_getTileQuad(gid, frame)
 	frame = frame or 1
 	local tileset = self:getTileset(gid)
@@ -440,6 +435,19 @@ function Map:_getTileQuad(gid, frame)
 		tileset.tilewidth, tileset.tileheight,
 		image:getWidth(), image:getHeight()
 	)
+end
+
+-- Gets the quad of the tile with the given global ID.
+-- Returns false if the tileset uses a single image.
+function Map:_getTileImage(gid, frame)
+	frame = frame or 1
+	local tileset = self:getTileset(gid)
+	if tileset.image then return false end
+	local tile = self:getTile(gid)
+	if tile and tile.animation then
+		tile = self:getTile(tileset.firstgid + tile.animation[frame].tileid)
+	end
+	return self._images[tile.image]
 end
 
 -- Gets the tileset that has the tile with the given global ID.
