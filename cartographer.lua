@@ -93,6 +93,7 @@ function Layer.tilelayer:_initAnimations()
 			if tile.animation then
 				local gid = tileset.firstgid + tile.id
 				self._animations[gid] = {
+					tileset = tileset,
 					frames = tile.animation,
 					currentFrame = 1,
 					timer = tile.animation[1].duration,
@@ -288,7 +289,14 @@ function Layer.tilelayer:draw()
 	end
 	-- draw the items that aren't part of a sprite batch
 	for _, item in ipairs(self._unbatchedItems) do
-		local tile = self._map:getTile(item.gid)
+		local tile
+		local animation = self._animations[item.gid]
+		if animation then
+			local gid = animation.tileset.firstgid + animation.frames[animation.currentFrame].tileid
+			tile = self._map:getTile(gid)
+		else
+			tile = self._map:getTile(item.gid)
+		end
 		love.graphics.draw(self._map._images[tile.image], item.pixelX, item.pixelY)
 	end
 	love.graphics.pop()
