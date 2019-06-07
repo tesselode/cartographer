@@ -116,10 +116,10 @@ end
 	it's just a parent class to share code between
 	tile layers and object layers.
 ]]
-Layer.itemlayer = setmetatable({}, Layer.base)
-Layer.itemlayer.__index = Layer.itemlayer
+Layer.spritelayer = setmetatable({}, Layer.base)
+Layer.spritelayer.__index = Layer.spritelayer
 
-function Layer.itemlayer:_initAnimations()
+function Layer.spritelayer:_initAnimations()
 	self._animations = {}
 	for _, tileset in ipairs(self._map.tilesets) do
 		for _, tile in ipairs(tileset.tiles) do
@@ -136,7 +136,7 @@ function Layer.itemlayer:_initAnimations()
 	end
 end
 
-function Layer.itemlayer:_createSpriteBatches()
+function Layer.spritelayer:_createSpriteBatches()
 	self._spriteBatches = {}
 	for _, tileset in ipairs(self._map.tilesets) do
 		if tileset.image then
@@ -194,7 +194,7 @@ end
 	the x/y/tileGid fields as indicators that a sprite exists.
 ]]
 
-function Layer.itemlayer:_setSprite(x, y, gid)
+function Layer.spritelayer:_setSprite(x, y, gid)
 	-- if the gid is 0 (empty), remove the sprite at (x, y)
 	-- (if it exists)
 	if gid == 0 then
@@ -259,7 +259,7 @@ function Layer.itemlayer:_setSprite(x, y, gid)
 	end
 end
 
-function Layer.itemlayer:_init(map)
+function Layer.spritelayer:_init(map)
 	Layer.base._init(self, map)
 	self:_initAnimations()
 	self:_createSpriteBatches()
@@ -273,7 +273,7 @@ function Layer.itemlayer:_init(map)
 	}
 end
 
-function Layer.itemlayer:_updateAnimations(dt)
+function Layer.spritelayer:_updateAnimations(dt)
 	for gid, animation in pairs(self._animations) do
 		-- decrement the animation timer
 		animation.timer = animation.timer - 1000 * dt
@@ -299,11 +299,11 @@ function Layer.itemlayer:_updateAnimations(dt)
 	end
 end
 
-function Layer.itemlayer:update(dt)
+function Layer.spritelayer:update(dt)
 	self:_updateAnimations(dt)
 end
 
-function Layer.itemlayer:draw()
+function Layer.spritelayer:draw()
 	love.graphics.push()
 	love.graphics.translate(self.offsetx, self.offsety)
 	-- draw the sprite batches
@@ -322,11 +322,11 @@ function Layer.itemlayer:draw()
 end
 
 -- Represents a tile layer in an exported Tiled map.
-Layer.tilelayer = setmetatable({}, Layer.itemlayer)
+Layer.tilelayer = setmetatable({}, Layer.spritelayer)
 Layer.tilelayer.__index = Layer.tilelayer
 
 function Layer.tilelayer:_init(map)
-	Layer.itemlayer._init(self, map)
+	Layer.spritelayer._init(self, map)
 	for _, gid, _, _, pixelX, pixelY in self:getTiles() do
 		self:_setSprite(pixelX, pixelY, gid)
 	end
@@ -440,11 +440,11 @@ function Layer.tilelayer:getTiles()
 end
 
 -- Represents an object layer in an exported Tiled map.
-Layer.objectgroup = setmetatable({}, Layer.itemlayer)
+Layer.objectgroup = setmetatable({}, Layer.spritelayer)
 Layer.objectgroup.__index = Layer.objectgroup
 
 function Layer.objectgroup:_init(map)
-	Layer.itemlayer._init(self, map)
+	Layer.spritelayer._init(self, map)
 	for _, object in ipairs(self.objects) do
 		if object.gid and object.visible then
 			self:_setSprite(object.x, object.y - object.height, object.gid)
