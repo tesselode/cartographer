@@ -113,6 +113,50 @@ function Layer.tilelayer:_createSpriteBatches()
 	end
 end
 
+function Layer.tilelayer:_setSprite(gridX, gridY, gid)
+	-- if the gid is 0 (empty), remove the sprite at (gridX, gridY)
+	-- (if it exists)
+	if gid == 0 then
+		for i = #self._sprites, 1, -1 do
+			local sprite = self._sprites[i]
+			if sprite.gridX == gridX and sprite.gridY == gridY then
+				sprite.spriteBatch:set(sprite.id, 0, 0, 0, 0, 0)
+				table.remove(self._sprites, i)
+				break
+			end
+		end
+		return
+	end
+	-- get the appropriate quad for the sprite
+	local animation = self._animations[gid]
+	local quad = self._map:_getTileQuad(gid, animation and animation.currentFrame)
+	local sprite
+	-- check if a sprite already exists at (gridX, gridY)
+	for _, s in ipairs(self._sprites) do
+		if s.gridX == gridX and s.gridY == gridY then
+			sprite = s
+			break
+		end
+	end
+	if not sprite then
+		-- if the sprite doesn't exist, create a new one and add it to the sprite batch
+		local tileset = self._map:getTileset(gid)
+		local pixelX, pixelY = self:gridToPixel(gridX, gridY)
+		sprite = {
+			spriteBatch = self._spriteBatches[tileset],
+			gridX = gridX,
+			gridY = gridY,
+			pixelX = pixelX,
+			pixelY = pixelY,
+			id = self._spriteBatches[tileset]:add(quad, pixelX, pixelY)
+		}
+		table.insert(self._sprites, sprite)
+	else
+		-- otherwise, just set the existing sprite
+		sprite.spriteBatch:set(sprite.id, quad, sprite.pixelX, sprite.pixelY)
+	end
+end
+
 function Layer.tilelayer:_init(map)
 	Layer.base._init(self, map)
 	self:_initAnimations()
@@ -122,15 +166,7 @@ function Layer.tilelayer:_init(map)
 	for _, gid, gridX, gridY, pixelX, pixelY in self:getTiles() do
 		local tileset = self._map:getTileset(gid)
 		if tileset.image then
-			local quad = self._map:_getTileQuad(gid)
-			table.insert(self._sprites, {
-				tileGid = gid,
-				gridX = gridX,
-				gridY = gridY,
-				pixelX = pixelX,
-				pixelY = pixelY,
-				id = self._spriteBatches[tileset]:add(quad, pixelX, pixelY),
-			})
+			self:_setSprite(gridX, gridY, gid)
 		else
 			-- remember which items aren't part of a sprite batch
 			-- so we can iterate through them in layer.draw
@@ -204,6 +240,7 @@ function Layer.tilelayer:setTileAtGridPosition(x, y, gid)
 	else
 		self.data[coordinatesToIndex(x, y, self.width)] = gid
 	end
+	self:_setSprite(x, y, gid)
 end
 
 function Layer.tilelayer:getTileAtPixelPosition(x, y)
@@ -268,7 +305,7 @@ function Layer.tilelayer:_updateAnimations(dt)
 				local quad = self._map:_getTileQuad(gid, animation.currentFrame)
 				for _, sprite in ipairs(self._sprites) do
 					if sprite.tileGid == gid then
-						self._spriteBatches[tileset]:set(sprite.id, quad, sprite.pixelX, sprite.pixelY)
+						sprite.spriteBatch:set(sprite.id, quad, sprite.pixelX, sprite.pixelY)
 					end
 				end
 			end

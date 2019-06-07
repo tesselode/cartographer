@@ -1,6 +1,9 @@
 local cartographer = require 'cartographer'
 
-local testMap = cartographer.load 'demos/rpg/rpg.lua'
+local testMap = cartographer.load 'demos/platformer/platformer.lua'
+local terrainMain = testMap:getLayer('foreground', 'terrain', 'terrainMain')
+terrainMain:setTileAtGridPosition(2, 2, 257)
+terrainMain:setTileAtGridPosition(2, 2, 0)
 
 function love.update(dt)
 	testMap:update(dt)
