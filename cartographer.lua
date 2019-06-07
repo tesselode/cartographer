@@ -147,8 +147,38 @@ function Layer.spritelayer:_createSpriteBatches()
 end
 
 --[[
-	A note on how sprites are stored
-	--------------------------------
+	About sprites
+	-------------
+	In Tiled, both tile layers and object layers can display tiles.
+	Since this behavior is similar for both layer types, I encapsulated
+	them in a parent type called a "sprite layer".
+
+	In this case, a "sprite" is just an occurrence of a tile in the map.
+	Each sprite has a tile global ID, an x position, and a y position.
+
+	Tiled has two kinds of tilesets: single-image tilesets and image
+	collection tilesets. In single-image tilesets, each tile is a rectangular
+	piece of a single image. In image collection tilesets, each tile is the
+	entirety of a separate image.
+
+	For single-image tilesets, it makes sense to use sprite batches to draw
+	each tile that belongs to the same image. For image collection tilesets,
+	it does not. Therefore, sprites can either be batched or unbatched.
+	Batched sprites have two additional fields:
+	- spriteBatch - the sprite batch that the sprite belongs to
+	- id - the ID of the sprite in the sprite batch (sorry for the confusing
+	terminology)
+
+	The setTile function adds, changes, and removes sprites as needed, and it
+	adds and removes sprites from sprite batches automatically (depending
+	on whether the sprite's tile belongs to a single-image or image collection
+	tileset).
+
+	A sprite layer draws all of its sprite batches first, and then it
+	manually draws each unbatched sprite.
+
+	How sprites are stored
+	======================
 	Each sprite has the following fields:
 	- tileGid (number)
 	- x (number)
@@ -188,7 +218,9 @@ end
 
 	The biggest concern is that you have to insert and remove from all of the
 	tables at the same time, otherwise the data for each sprite will get
-	misaligned.
+	misaligned. To keep Lua's table functions working smoothly, I set
+	spriteBatch and id to false instead of nil when I want to "remove" them;
+	that way I don't make holes in the tables.
 
 	Note: the exists field isn't really necessary, but I'd feel weird using
 	the x/y/tileGid fields as indicators that a sprite exists.
@@ -332,6 +364,7 @@ function Layer.tilelayer:_init(map)
 	end
 end
 
+-- Gets the left, top, right, and bottom bounds of the layer (in tiles).
 function Layer.tilelayer:getGridBounds()
 	if self.chunks then
 		local left, top, right, bottom
@@ -350,6 +383,7 @@ function Layer.tilelayer:getGridBounds()
 	return self.x, self.y, self.x + self.width - 1, self.y + self.height - 1
 end
 
+-- Gets the left, top, right, and bottom bounds of the layer (in pixels).
 function Layer.tilelayer:getPixelBounds()
 	local left, top, right, bottom = self:getGridBounds()
 	left, top = self:gridToPixel(left, top)
@@ -357,6 +391,8 @@ function Layer.tilelayer:getPixelBounds()
 	return left, top, right, bottom
 end
 
+-- Returns the global ID of the tile at the given grid position,
+-- or false if the tile is empty.
 function Layer.tilelayer:getTileAtGridPosition(x, y)
 	local gid
 	if self.chunks then
@@ -376,6 +412,7 @@ function Layer.tilelayer:getTileAtGridPosition(x, y)
 	return gid
 end
 
+-- Sets the tile at the given grid position to the specified global ID.
 function Layer.tilelayer:setTileAtGridPosition(x, y, gid)
 	if self.chunks then
 		for _, chunk in ipairs(self.chunks) do
@@ -395,10 +432,13 @@ function Layer.tilelayer:setTileAtGridPosition(x, y, gid)
 	self:_setSprite(pixelX, pixelY, gid)
 end
 
+-- Returns the global ID of the tile at the given pixel position,
+-- or false if the tile is empty.
 function Layer.tilelayer:getTileAtPixelPosition(x, y)
 	return self:getTileAtGridPosition(self:pixelToGrid(x, y))
 end
 
+-- Sets the tile at the given pixel position to the specified global ID.
 function Layer.tilelayer:setTileAtPixelPosition(gridX, gridY, gid)
 	local pixelX, pixelY = self:pixelToGrid(gridX, gridY)
 	return self:setTileAtGridPosition(pixelX, pixelY, gid)
