@@ -625,6 +625,13 @@ function Map:getTile(gid)
 	end
 end
 
+-- Gets the type of the tile with the given global ID, if it exists.
+function Map:getTileType(gid)
+	local tile = self:getTile(gid)
+	if not tile then return end
+	return tile.type
+end
+
 -- Gets the value of the specified property on the tile
 -- with the given global ID, if it exists.
 function Map:getTileProperty(gid, propertyName)
