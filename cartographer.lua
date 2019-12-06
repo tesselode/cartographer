@@ -387,7 +387,7 @@ end
 function Layer.tilelayer:getPixelBounds()
 	local left, top, right, bottom = self:getGridBounds()
 	left, top = self:gridToPixel(left, top)
-	right, bottom = self:gridToPixel(right, bottom)
+	right, bottom = self:gridToPixel(right + 1, bottom + 1)
 	return left, top, right, bottom
 end
 
