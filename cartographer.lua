@@ -1,5 +1,5 @@
 local cartographer = {
-	_VERSION = 'Cartographer',
+	_VERSION = 'Cartographer v2.1',
 	_DESCRIPTION = 'Simple Tiled map loading for LÖVE.',
 	_URL = 'https://github.com/tesselode/cartographer',
 	_LICENSE = [[
