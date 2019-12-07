@@ -113,7 +113,7 @@ Draws the map.
 Converts grid coordinates to pixel coordinates for this layer.
 
 #### `local gridX, gridY = Layer:pixelToGrid(pixelX, pixelY)`
-Converts pixel coordinates for this layer to grid coordinates.
+Converts pixel coordinates for this layer to grid coordinates. Note that the grid coordinates will always be integers.
 
 ### TileLayer
 
