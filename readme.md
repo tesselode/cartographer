@@ -26,7 +26,7 @@ Cartographer is a small library for loading, reading, and drawing Tiled maps in 
 		- [`local gid = TileLayer:getTileAtGridPosition(x, y)`](#local-gid--tilelayergettileatgridpositionx-y)
 		- [`TileLayer:setTileAtGridPosition(x, y, gid)`](#tilelayersettileatgridpositionx-y-gid)
 		- [`local gid = TileLayer:getTileAtPixelPosition(x, y)`](#local-gid--tilelayergettileatpixelpositionx-y)
-		- [`TileLayer:setTileAtPixelPosition(gridX, gridY, gid)`](#tilelayersettileatpixelpositiongridx-gridy-gid)
+		- [`TileLayer:setTileAtPixelPosition(x, y, gid)`](#tilelayersettileatpixelpositionx-y-gid)
 		- [`local iterator = TileLayer:getTiles()`](#local-iterator--tilelayergettiles)
 		- [`TileLayer:update(dt)`](#tilelayerupdatedt)
 		- [`TileLayer:draw()`](#tilelayerdraw)
@@ -132,7 +132,7 @@ Sets the tile at the specified grid position to the specified unique ID. 0 repre
 #### `local gid = TileLayer:getTileAtPixelPosition(x, y)`
 Gets the unique ID of the tile at the specified position in pixels. 0 represents an empty tile.
 
-#### `TileLayer:setTileAtPixelPosition(gridX, gridY, gid)`
+#### `TileLayer:setTileAtPixelPosition(x, y, gid)`
 Sets the tile at the specified pixel position to the specified unique ID. 0 represents an empty tile.
 
 #### `local iterator = TileLayer:getTiles()`
