@@ -47,18 +47,36 @@ local function formatPath(path)
 	return path
 end
 
--- Decompress tile layer data
--- https://github.com/karai17/Simple-Tiled-Implementation/blob/master/sti/utils.lua#L67
-local function getDecompressedData(data)
+--[[
+	Interprets a series of bytes as a series of unsigned 32-bit integers,
+	and returns a table containing the integers
+	https://github.com/karai17/Simple-Tiled-Implementation/blob/master/sti/utils.lua#L67
+]]
+local function bytesToIntegerList(bytes)
 	local ffi = require 'ffi'
-	local d = {}
-	local decoded = ffi.cast('uint32_t*', data)
-
-	for i = 0, (data:len() / ffi.sizeof('uint32_t')) - 1 do
-		table.insert(d, tonumber(decoded[i]))
+	local integers = {}
+	local casted = ffi.cast('uint32_t*', bytes)
+	for i = 0, (bytes:len() / ffi.sizeof('uint32_t')) - 1 do
+		table.insert(integers, tonumber(casted[i]))
 	end
+	return integers
+end
 
-	return d
+--[[
+	Decodes (and optionally decompresses) data for a tile layer.
+	Follows the process outlined in the Tiled docs here:
+	https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#data
+]]
+local function decodeTileData(encoded, compressionFormat)
+	local data = love.data.decode('string', 'base64', encoded)
+	if compressionFormat == 'zstd' then
+		error({msg='Zstandard is not a supported compression type.'})
+	elseif compressionFormat == 'gzip' then
+		data = love.data.decompress('string', 'gzip', data)
+	elseif compressionFormat == 'zlib' then
+		data = love.data.decompress('string', 'zlib', data)
+	end
+	return bytesToIntegerList(data)
 end
 
 -- given a grid with w items per row, return the column and row of the nth item
@@ -371,40 +389,25 @@ end
 Layer.tilelayer = setmetatable({}, Layer.spritelayer)
 Layer.tilelayer.__index = Layer.tilelayer
 
+function Layer.tilelayer:_decodeData()
+	if self.encoding ~= 'base64' then return end
+	if not require 'ffi' then
+		error({msg='Compressed maps require LuaJIT FFI.\nPlease Switch your interperator to LuaJIT or your Tile Layer Format to \"CSV\".'})
+	end
+	if self.chunks then
+		for _, chunk in ipairs(self.chunks) do
+			if chunk.data then
+				chunk.data = decodeTileData(chunk.data, self.compression)
+			end
+		end
+	else
+		self.data = decodeTileData(self.data, self.compression)
+	end
+end
+
 function Layer.tilelayer:_init(map)
 	Layer.spritelayer._init(self, map)
-	-- Decompress tile layer data before use, ...
-	if self.encoding == 'base64' then
-		if not require 'ffi' then
-			error({msg='Compressed maps require LuaJIT FFI.\nPlease Switch your interperator to LuaJIT or your Tile Layer Format to \"CSV\".'})
-		end
-		if self.chunks then
-			for _, v in ipairs(self.chunks) do
-				if v.data then
-					local data = love.data.decode('string', 'base64', v.data)
-					if self.compression == 'zstd' then
-						error({msg='Zstandard is not a supported compression type.'})
-					elseif self.compression == 'gzip' then
-						data = love.data.decompress('string', 'gzip', data)
-					elseif self.compression == 'zlib' then
-						data = love.data.decompress('string', 'zlib', data)
-					end
-					v.data = getDecompressedData(data)
-				end
-			end
-		else
-			local data = love.data.decode('string', 'base64', self.data)
-			if self.compression == 'zstd' then
-				error({msg='Zstandard is not a supported compression type.'})
-			elseif self.compression == 'gzip' then
-				data = love.data.decompress('string', 'gzip', data)
-			elseif self.compression == 'zlib' then
-				data = love.data.decompress('string', 'zlib', data)
-			end
-			self.data = getDecompressedData(data)
-		end
-	end
-	-- ... And then set the sprites.
+	self:_decodeData()
 	for _, gid, _, _, pixelX, pixelY in self:getTiles() do
 		self:_setSprite(pixelX, pixelY, gid)
 	end
