@@ -50,14 +50,14 @@ cartographer = require 'path.to.cartographer' -- if it's in subfolders
 
 ## Feature support
 Supported:
-- Drawing CSV-formatted tile layers
+- Drawing CSV and Base64-formatted tile layers
 - Drawing tile objects
 - Animated tiles
 - Layer offsets
 - Infinite maps
 
 Not supported:
-- Drawing Base64 tile layers
+- Drawing Zstandard-compressed tile layers
 - Isometic and hexagonal maps
 
 ## API
