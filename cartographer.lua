@@ -733,8 +733,8 @@ end
 function cartographer.load(path)
 	if not path then error('No map path provided', 2) end
 	local map = setmetatable(love.filesystem.load(path)(), Map)
-	local _, err = pcall(map._init, map, path)
-	if err then
+	local status, err = pcall(map._init, map, path)
+	if not status then
 		error(type(err) == 'table' and err.msg or err, 2)
 	end
 	return map
