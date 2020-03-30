@@ -49,7 +49,7 @@ end
 
 -- Decompress tile layer data
 -- https://github.com/karai17/Simple-Tiled-Implementation/blob/master/sti/utils.lua#L67
-function getDecompressedData(data)
+local function getDecompressedData(data)
 	local ffi = require 'ffi'
 	local d = {}
 	local decoded = ffi.cast('uint32_t*', data)
@@ -379,7 +379,7 @@ function Layer.tilelayer:_init(map)
 			error({msg='Compressed maps require LuaJIT FFI.\nPlease Switch your interperator to LuaJIT or your Tile Layer Format to \"CSV\".'})
 		end
 		if self.chunks then
-			for k, v in ipairs(self.chunks) do
+			for _, v in ipairs(self.chunks) do
 				if v.data then
 					local data = love.data.decode('string', 'base64', v.data)
 					if self.compression == 'zstd' then
