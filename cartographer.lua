@@ -1,3 +1,4 @@
+--- Tiled map loading and drawing library for LÖVE.
 local cartographer = {
 	_VERSION = 'Cartographer v2.1',
 	_DESCRIPTION = 'Simple Tiled map loading for LÖVE.',
@@ -199,6 +200,8 @@ local function getLayer(self, ...)
 	return layer
 end
 
+--- The base class for all layers.
+-- @type Layer
 local Layer = {}
 
 -- A common class for all layer types.
@@ -209,7 +212,11 @@ function Layer.base:_init(map)
 	self._map = map
 end
 
--- Converts grid coordinates to pixel coordinates for this layer.
+--- Converts grid coordinates to pixel coordinates for this layer.
+-- @number x the column to get the pixel coordinates of
+-- @number y the row to get the pixel coordinates of
+-- @return the horizontal position of the grid cell in pixels
+-- @return the vertical position of the grid cell in pixels
 function Layer.base:gridToPixel(x, y)
 	checkArgument(1, x, 'number')
 	checkArgument(2, y, 'number')
@@ -218,7 +225,11 @@ function Layer.base:gridToPixel(x, y)
 	return x, y
 end
 
--- Converts pixel coordinates for this layer to grid coordinates.
+--- Converts pixel coordinates for this layer to grid coordinates.
+-- @number x the horizontal position to get the grid cell at
+-- @number y the vertical position to get the grid cell at
+-- @return the column of the grid cell
+-- @return the row of the grid cell
 function Layer.base:pixelToGrid(x, y)
 	checkArgument(1, x, 'number')
 	checkArgument(2, y, 'number')
@@ -228,13 +239,8 @@ function Layer.base:pixelToGrid(x, y)
 	return x, y
 end
 
---[[
-	Represents any layer type that can contain tiles
-	(currently tile layers and object layers).
-	There's no layer type in Tiled called "item layers",
-	it's just a parent class to share code between
-	tile layers and object layers.
-]]
+--- Parent class for tile layers and object layers.
+-- @type SpriteLayer
 Layer.spritelayer = setmetatable({}, Layer.base)
 Layer.spritelayer.__index = Layer.spritelayer
 
@@ -450,11 +456,14 @@ function Layer.spritelayer:_updateAnimations(dt)
 	end
 end
 
+--- Updates animations on the layer.
+-- @number dt the time elapsed since the last frame (in seconds)
 function Layer.spritelayer:update(dt)
 	checkArgument(1, dt, 'number')
 	self:_updateAnimations(dt)
 end
 
+--- Draws the layer.
 function Layer.spritelayer:draw()
 	love.graphics.push()
 	love.graphics.translate(self.offsetx, self.offsety)
@@ -473,7 +482,10 @@ function Layer.spritelayer:draw()
 	love.graphics.pop()
 end
 
--- Represents a tile layer in an exported Tiled map.
+--- A layer that contains tiles placed on a grid.
+--
+-- Inherits from @{SpriteLayer}.
+-- @type TileLayer
 Layer.tilelayer = setmetatable({}, Layer.spritelayer)
 Layer.tilelayer.__index = Layer.tilelayer
 
@@ -500,7 +512,11 @@ function Layer.tilelayer:_init(map)
 	end
 end
 
--- Gets the left, top, right, and bottom bounds of the layer (in tiles).
+--- Gets the bounds of the layer (in tiles).
+-- @return the left bound of the layer
+-- @return the top bound of the layer
+-- @return the right bound of the layer
+-- @return the bottom bound of the layer
 function Layer.tilelayer:getGridBounds()
 	if self.chunks then
 		local left, top, right, bottom
@@ -519,7 +535,11 @@ function Layer.tilelayer:getGridBounds()
 	return self.x, self.y, self.x + self.width - 1, self.y + self.height - 1
 end
 
--- Gets the left, top, right, and bottom bounds of the layer (in pixels).
+--- Gets the bounds of the layer (in pixels).
+-- @return the left bound of the layer
+-- @return the top bound of the layer
+-- @return the right bound of the layer
+-- @return the bottom bound of the layer
 function Layer.tilelayer:getPixelBounds()
 	local left, top, right, bottom = self:getGridBounds()
 	left, top = self:gridToPixel(left, top)
@@ -527,8 +547,11 @@ function Layer.tilelayer:getPixelBounds()
 	return left, top, right, bottom
 end
 
--- Returns the global ID of the tile at the given grid position,
--- or false if the tile is empty.
+--- Gets the tile at the given grid position.
+-- @number x the column to get the tile at
+-- @number y the row to get the tile at
+-- @return the global ID of the tile at the given grid position,
+-- or false if the tile is empty
 function Layer.tilelayer:getTileAtGridPosition(x, y)
 	checkArgument(1, x, 'number')
 	checkArgument(2, y, 'number')
@@ -550,7 +573,10 @@ function Layer.tilelayer:getTileAtGridPosition(x, y)
 	return gid
 end
 
--- Sets the tile at the given grid position to the specified global ID.
+--- Sets the tile at the given grid position.
+-- @number x the column to set the tile at
+-- @number y the row to set the tile at
+-- @number gid the global ID to set the tile to
 function Layer.tilelayer:setTileAtGridPosition(x, y, gid)
 	checkArgument(1, x, 'number')
 	checkArgument(2, y, 'number')
@@ -573,16 +599,22 @@ function Layer.tilelayer:setTileAtGridPosition(x, y, gid)
 	self:_setSprite(pixelX, pixelY, gid)
 end
 
--- Returns the global ID of the tile at the given pixel position,
--- or false if the tile is empty.
+--- Gets the tile at the given pixel position.
+-- @number x the horizontal position to get the tile at
+-- @number y the vertical position to get the tile at
+-- @return the global ID of the tile at the given pixel position,
+-- or false if the tile is empty
 function Layer.tilelayer:getTileAtPixelPosition(x, y)
 	checkArgument(1, x, 'number')
 	checkArgument(2, y, 'number')
 	return self:getTileAtGridPosition(self:pixelToGrid(x, y))
 end
 
--- Sets the tile at the given pixel position to the specified global ID.
-function Layer.tilelayer:setTileAtPixelPosition(gridX, gridY, gid)
+--- Sets the tile at the given pixel position.
+-- @number x the horizontal position to set the tile at
+-- @number y the vertical position to set the tile at
+-- @number gid the global ID to set the tile to
+function Layer.tilelayer:setTileAtPixelPosition(x, y, gid)
 	checkArgument(1, x, 'number')
 	checkArgument(2, y, 'number')
 	checkArgument(3, gid, 'number')
@@ -621,11 +653,23 @@ function Layer.tilelayer:_tileIterator(i)
 	end
 end
 
+--- Returns an iterator over all the tiles in this layer.
+-- @return an iterator that returns that following values:
+--
+-- - the index of the tile
+-- - the global ID of the tile
+-- - the x position of the tile (in grid cells)
+-- - the y position of the tile (in grid cells)
+-- - the x position of the tile (in pixels)
+-- - the y position of the tile (in pixels)
 function Layer.tilelayer:getTiles()
 	return self._tileIterator, self, 0
 end
 
--- Represents an object layer in an exported Tiled map.
+--- A layer that contains objects.
+--
+-- Inherits from @{SpriteLayer}.
+-- @type ObjectGroup
 Layer.objectgroup = setmetatable({}, Layer.spritelayer)
 Layer.objectgroup.__index = Layer.objectgroup
 
@@ -638,15 +682,18 @@ function Layer.objectgroup:_init(map)
 	end
 end
 
--- Represents an image layer in an exported Tiled map.
+--- A layer that displays a single image.
+-- @type ImageLayer
 Layer.imagelayer = setmetatable({}, Layer.base)
 Layer.imagelayer.__index = Layer.imagelayer
 
+--- Draws the layer.
 function Layer.imagelayer:draw()
 	love.graphics.draw(self._map._images[self.image], self.offsetx, self.offsety)
 end
 
--- Represents a layer group in an exported Tiled map.
+--- A layer that contains other layers.
+-- @type Group
 Layer.group = setmetatable({}, Layer.base)
 Layer.group.__index = Layer.group
 
@@ -659,8 +706,17 @@ function Layer.group:_init(map)
 	setmetatable(self.layers, getByNameMetatable)
 end
 
-Layer.group.getLayer = getLayer
+--- Gets a child layer by name.
+--
+-- Can get nested layers.
+-- @string ... the name(s) of the layers to get
+-- @return the @{Layer}, if it exists
+function Layer.group:getLayer(...)
+	return getLayer(self, ...)
+end
 
+--- Updates animations in all child layers.
+-- @number dt the elapsed time since the last frame (in seconds)
 function Layer.group:update(dt)
 	checkArgument(1, dt, 'number')
 	for _, layer in ipairs(self.layers) do
@@ -668,12 +724,15 @@ function Layer.group:update(dt)
 	end
 end
 
+--- Draws the layer.
 function Layer.group:draw()
 	for _, layer in ipairs(self.layers) do
 		if layer.visible and layer.draw then layer:draw() end
 	end
 end
 
+--- A tiled map.
+-- @type Map
 local Map = {}
 Map.__index = Map
 
@@ -752,7 +811,9 @@ function Map:_getTileImage(gid, frame)
 	return self._images[tile.image]
 end
 
--- Gets the tileset that has the tile with the given global ID.
+--- Gets the tileset that has the tile with the given global ID.
+-- @number gid the global ID of the tile
+-- @return the tileset that contains the tile, if it exists
 function Map:getTileset(gid)
 	checkArgument(1, gid, 'number')
 	for i = #self.tilesets, 1, -1 do
@@ -763,7 +824,9 @@ function Map:getTileset(gid)
 	end
 end
 
--- Gets the data table for the tile with the given global ID, if it exists.
+--- Gets a tile with the given global ID.
+-- @number gid the global ID of the tile
+-- @return the data table for the tile with the given global ID, if it exists
 function Map:getTile(gid)
 	checkArgument(1, gid, 'number')
 	local tileset = self:getTileset(gid)
@@ -774,7 +837,9 @@ function Map:getTile(gid)
 	end
 end
 
--- Gets the type of the tile with the given global ID, if it exists.
+--- Gets the type of a tile.
+-- @number gid the global ID of the tile
+-- @return the type of the tile with the given global ID, if it exists
 function Map:getTileType(gid)
 	checkArgument(1, gid, 'number')
 	local tile = self:getTile(gid)
@@ -782,8 +847,10 @@ function Map:getTileType(gid)
 	return tile.type
 end
 
--- Gets the value of the specified property on the tile
--- with the given global ID, if it exists.
+--- Gets the value of a property of a tile.
+-- @number gid the global ID of the tile
+-- @string propertyName the name of the property
+-- @return the value of the property, if it exists
 function Map:getTileProperty(gid, propertyName)
 	checkArgument(1, gid, 'number')
 	checkArgument(2, propertyName, 'string')
@@ -793,8 +860,10 @@ function Map:getTileProperty(gid, propertyName)
 	return tile.properties[propertyName]
 end
 
--- Sets the value of the specified property on the tile
--- with the given global ID.
+--- Sets the value of a tile property.
+-- @number gid the global ID of the tile
+-- @string propertyName the name of the property
+-- @param propertyValue the value to set the property to
 function Map:setTileProperty(gid, propertyName, propertyValue)
 	checkArgumentsExist(gid, propertyName, propertyValue)
 	checkArgument(1, gid, 'number')
@@ -809,8 +878,17 @@ function Map:setTileProperty(gid, propertyName, propertyValue)
 	tile.properties[propertyName] = propertyValue
 end
 
-Map.getLayer = getLayer
+--- Gets a layer by name.
+--
+-- Can get nested layers.
+-- @string ... the name(s) of the layers to get
+-- @return the @{Layer}, if it exists
+function Map:getLayer(...)
+	return getLayer(self, ...)
+end
 
+--- Updates all animations in the map.
+-- @number dt the elapsed time since the last frame
 function Map:update(dt)
 	checkArgument(1, dt, 'number')
 	for _, layer in ipairs(self.layers) do
@@ -818,6 +896,7 @@ function Map:update(dt)
 	end
 end
 
+--- Draws the solid color background of the map.
 function Map:drawBackground()
 	if self.backgroundcolor then
 		love.graphics.push 'all'
@@ -832,6 +911,7 @@ function Map:drawBackground()
 	end
 end
 
+--- Draws the map.
 function Map:draw()
 	self:drawBackground()
 	for _, layer in ipairs(self.layers) do
@@ -839,7 +919,11 @@ function Map:draw()
 	end
 end
 
--- Loads a Tiled map from a lua file.
+--- @section end
+
+--- Loads a Tiled map from an exported Lua file.
+-- @string path the path to the Lua file
+-- @return the loaded @{Map}
 function cartographer.load(path)
 	checkArgument(1, path, 'string')
 	local map = setmetatable(love.filesystem.load(path)(), Map)

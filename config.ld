@@ -1,0 +1,5 @@
+project = 'Cartographer'
+title = 'Cartographer Manual'
+dir = 'html'
+file = 'cartographer.lua'
+format = 'markdown'
