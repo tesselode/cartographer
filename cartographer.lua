@@ -586,8 +586,8 @@ function Layer.tilelayer:setTileAtPixelPosition(gridX, gridY, gid)
 	checkArgument(1, x, 'number')
 	checkArgument(2, y, 'number')
 	checkArgument(3, gid, 'number')
-	local pixelX, pixelY = self:pixelToGrid(gridX, gridY)
-	return self:setTileAtGridPosition(pixelX, pixelY, gid)
+	local gridX, gridY = self:pixelToGrid(x, y)
+	return self:setTileAtGridPosition(gridX, gridY, gid)
 end
 
 function Layer.tilelayer:_getTileAtIndex(index)
