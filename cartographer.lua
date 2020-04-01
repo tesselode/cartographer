@@ -27,6 +27,88 @@ local cartographer = {
 	]]
 }
 
+-- gets the error level needed to make an error appear
+-- in the user's code, not the library code
+local function getUserErrorLevel()
+	local source = debug.getinfo(1).source
+	local level = 1
+	while debug.getinfo(level).source == source do
+		level = level + 1
+	end
+	--[[
+		we return level - 1 here and not just level
+		because the level was calculated one function
+		deeper than the function that will actually
+		use this value. if we produced an error *inside*
+		this function, level would be correct, but
+		for the function calling this function, level - 1
+		is correct.
+	]]
+	return level - 1
+end
+
+-- gets the name of the function that the user called
+-- that eventually caused an error
+local function getUserCalledFunctionName()
+	return debug.getinfo(getUserErrorLevel() - 1).name
+end
+
+local function checkCondition(condition, message)
+	if condition then return end
+	error(message, getUserErrorLevel())
+end
+
+-- changes a list of types into a human-readable phrase
+-- i.e. string, table, number -> "string, table, or number"
+local function getAllowedTypesText(...)
+	local numberOfArguments = select('#', ...)
+	if numberOfArguments >= 3 then
+		local text = ''
+		for i = 1, numberOfArguments - 1 do
+			text = text .. string.format('%s, ', select(i, ...))
+		end
+		text = text .. string.format('or %s', select(numberOfArguments, ...))
+		return text
+	elseif numberOfArguments == 2 then
+		return string.format('%s or %s', select(1, ...), select(2, ...))
+	end
+	return select(1, ...)
+end
+
+-- makes sure all of the given arguments are non-nil
+local function checkArgumentsExist(...)
+	for i = 1, select('#', ...) do
+		if select(i, ...) == nil then
+			error(
+				string.format(
+					"wrong number of arguments to '%s'",
+					getUserCalledFunctionName()
+				),
+				getUserErrorLevel()
+			)
+		end
+	end
+end
+
+-- checks if an argument is of the correct type, and if not,
+-- throws a "bad argument" error consistent with the ones
+-- lua and love produce
+local function checkArgument(argumentIndex, argument, ...)
+	for i = 1, select('#', ...) do
+		if type(argument) == select(i, ...) then return end
+	end
+	error(
+		string.format(
+			"bad argument #%i to '%s' (expected %s, got %s)",
+			argumentIndex,
+			getUserCalledFunctionName(),
+			getAllowedTypesText(...),
+			type(argument)
+		),
+		getUserErrorLevel()
+	)
+end
+
 -- splits a path into directory, file (with filename), and just filename
 -- i really only need the directory
 -- https://stackoverflow.com/a/12191225
@@ -69,9 +151,8 @@ end
 ]]
 local function decodeTileData(encoded, compressionFormat)
 	local data = love.data.decode('string', 'base64', encoded)
-	if compressionFormat == 'zstd' then
-		error({msg='Zstandard is not a supported compression type.'})
-	elseif compressionFormat == 'gzip' then
+	checkCondition(compressionFormat ~= 'zstd', 'Zstandard is not a supported compression type')
+	if compressionFormat == 'gzip' then
 		data = love.data.decompress('string', 'gzip', data)
 	elseif compressionFormat == 'zlib' then
 		data = love.data.decompress('string', 'zlib', data)
@@ -101,8 +182,10 @@ local getByNameMetatable = {
 
 local function getLayer(self, ...)
 	local numberOfArguments = select('#', ...)
-	if numberOfArguments == 0 then
-		error('must specify at least one layer name', 2)
+	checkCondition(numberOfArguments > 0, 'must specify at least one layer name')
+	for i = 1, numberOfArguments do
+		local argument = select(i, ...)
+		checkArgument(i, argument, 'string')
 	end
 	local layer
 	local layerName = select(1, ...)
@@ -128,6 +211,8 @@ end
 
 -- Converts grid coordinates to pixel coordinates for this layer.
 function Layer.base:gridToPixel(x, y)
+	checkArgument(1, x, 'number')
+	checkArgument(2, y, 'number')
 	x, y = x * self._map.tilewidth, y * self._map.tileheight
 	x, y = x + self.offsetx, y + self.offsety
 	return x, y
@@ -135,6 +220,8 @@ end
 
 -- Converts pixel coordinates for this layer to grid coordinates.
 function Layer.base:pixelToGrid(x, y)
+	checkArgument(1, x, 'number')
+	checkArgument(2, y, 'number')
 	x, y = x - self.offsetx, y - self.offsety
 	x, y = x / self._map.tilewidth, y / self._map.tileheight
 	x, y = math.floor(x), math.floor(y)
@@ -364,6 +451,7 @@ function Layer.spritelayer:_updateAnimations(dt)
 end
 
 function Layer.spritelayer:update(dt)
+	checkArgument(1, dt, 'number')
 	self:_updateAnimations(dt)
 end
 
@@ -391,9 +479,8 @@ Layer.tilelayer.__index = Layer.tilelayer
 
 function Layer.tilelayer:_decodeData()
 	if self.encoding ~= 'base64' then return end
-	if not require 'ffi' then
-		error({msg='Compressed maps require LuaJIT FFI.\nPlease Switch your interperator to LuaJIT or your Tile Layer Format to \"CSV\".'})
-	end
+	checkCondition(require 'ffi', 'Compressed maps require LuaJIT\'s FFI library. Switch '
+		.. ' your interperator to LuaJIT or your tile layer format to \"CSV\".')
 	if self.chunks then
 		for _, chunk in ipairs(self.chunks) do
 			if chunk.data then
@@ -443,6 +530,8 @@ end
 -- Returns the global ID of the tile at the given grid position,
 -- or false if the tile is empty.
 function Layer.tilelayer:getTileAtGridPosition(x, y)
+	checkArgument(1, x, 'number')
+	checkArgument(2, y, 'number')
 	local gid
 	if self.chunks then
 		for _, chunk in ipairs(self.chunks) do
@@ -463,6 +552,9 @@ end
 
 -- Sets the tile at the given grid position to the specified global ID.
 function Layer.tilelayer:setTileAtGridPosition(x, y, gid)
+	checkArgument(1, x, 'number')
+	checkArgument(2, y, 'number')
+	checkArgument(3, gid, 'number')
 	if self.chunks then
 		for _, chunk in ipairs(self.chunks) do
 			local pointInChunk = x >= chunk.x
@@ -484,11 +576,16 @@ end
 -- Returns the global ID of the tile at the given pixel position,
 -- or false if the tile is empty.
 function Layer.tilelayer:getTileAtPixelPosition(x, y)
+	checkArgument(1, x, 'number')
+	checkArgument(2, y, 'number')
 	return self:getTileAtGridPosition(self:pixelToGrid(x, y))
 end
 
 -- Sets the tile at the given pixel position to the specified global ID.
 function Layer.tilelayer:setTileAtPixelPosition(gridX, gridY, gid)
+	checkArgument(1, x, 'number')
+	checkArgument(2, y, 'number')
+	checkArgument(3, gid, 'number')
 	local pixelX, pixelY = self:pixelToGrid(gridX, gridY)
 	return self:setTileAtGridPosition(pixelX, pixelY, gid)
 end
@@ -565,6 +662,7 @@ end
 Layer.group.getLayer = getLayer
 
 function Layer.group:update(dt)
+	checkArgument(1, dt, 'number')
 	for _, layer in ipairs(self.layers) do
 		if layer.update then layer:update(dt) end
 	end
@@ -656,6 +754,7 @@ end
 
 -- Gets the tileset that has the tile with the given global ID.
 function Map:getTileset(gid)
+	checkArgument(1, gid, 'number')
 	for i = #self.tilesets, 1, -1 do
 		local tileset = self.tilesets[i]
 		if tileset.firstgid <= gid then
@@ -666,6 +765,7 @@ end
 
 -- Gets the data table for the tile with the given global ID, if it exists.
 function Map:getTile(gid)
+	checkArgument(1, gid, 'number')
 	local tileset = self:getTileset(gid)
 	for _, tile in ipairs(tileset.tiles) do
 		if tileset.firstgid + tile.id == gid then
@@ -676,6 +776,7 @@ end
 
 -- Gets the type of the tile with the given global ID, if it exists.
 function Map:getTileType(gid)
+	checkArgument(1, gid, 'number')
 	local tile = self:getTile(gid)
 	if not tile then return end
 	return tile.type
@@ -684,6 +785,8 @@ end
 -- Gets the value of the specified property on the tile
 -- with the given global ID, if it exists.
 function Map:getTileProperty(gid, propertyName)
+	checkArgument(1, gid, 'number')
+	checkArgument(2, propertyName, 'string')
 	local tile = self:getTile(gid)
 	if not tile then return end
 	if not tile.properties then return end
@@ -693,6 +796,9 @@ end
 -- Sets the value of the specified property on the tile
 -- with the given global ID.
 function Map:setTileProperty(gid, propertyName, propertyValue)
+	checkArgumentsExist(gid, propertyName, propertyValue)
+	checkArgument(1, gid, 'number')
+	checkArgument(2, propertyName, 'string')
 	local tile = self:getTile(gid)
 	if not tile then
 		local tileset = self:getTileset(gid)
@@ -706,6 +812,7 @@ end
 Map.getLayer = getLayer
 
 function Map:update(dt)
+	checkArgument(1, dt, 'number')
 	for _, layer in ipairs(self.layers) do
 		if layer.update then layer:update(dt) end
 	end
@@ -734,12 +841,9 @@ end
 
 -- Loads a Tiled map from a lua file.
 function cartographer.load(path)
-	if not path then error('No map path provided', 2) end
+	checkArgument(1, path, 'string')
 	local map = setmetatable(love.filesystem.load(path)(), Map)
-	local status, err = pcall(map._init, map, path)
-	if not status then
-		error(type(err) == 'table' and err.msg or err, 2)
-	end
+	map:_init(path)
 	return map
 end
 
