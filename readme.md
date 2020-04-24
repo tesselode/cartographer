@@ -1,6 +1,8 @@
 # Cartographer
 Cartographer is a small library for loading, reading, and drawing Tiled maps in LÖVE. It draws tile layers and tile objects, and it has various utilities to make parsing Tiled maps easier.
 
+### [Documentation](https://tesselode.github.io/cartographer/)
+
 ## Usage example
 ```lua
 local cartographer = require 'cartographer'
