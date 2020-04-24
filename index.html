@@ -1,0 +1,858 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>Cartographer Manual</title>
+    <link rel="stylesheet" href="ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>Cartographer</h1>
+
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+<li><a href="#Layer">Layer </a></li>
+<li><a href="#SpriteLayer">SpriteLayer </a></li>
+<li><a href="#TileLayer">TileLayer </a></li>
+<li><a href="#ImageLayer">ImageLayer </a></li>
+<li><a href="#Group">Group </a></li>
+<li><a href="#Map">Map </a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><strong>cartographer</strong></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>cartographer</code></h1>
+<p>Tiled map loading and drawing library for LÖVE.</p>
+<p>
+
+</p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#load">load (path)</a></td>
+	<td class="summary">Loads a Tiled map from an exported Lua file.</td>
+	</tr>
+</table>
+<h2><a href="#Layer">Layer </a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#Layer.base:gridToPixel">Layer.base:gridToPixel (x, y)</a></td>
+	<td class="summary">Converts grid coordinates to pixel coordinates for this layer.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.base:pixelToGrid">Layer.base:pixelToGrid (x, y)</a></td>
+	<td class="summary">Converts pixel coordinates for this layer to grid coordinates.</td>
+	</tr>
+</table>
+<h2><a href="#SpriteLayer">SpriteLayer </a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#Layer.spritelayer:update">Layer.spritelayer:update (dt)</a></td>
+	<td class="summary">Updates animations on the layer.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.spritelayer:draw">Layer.spritelayer:draw ()</a></td>
+	<td class="summary">Draws the layer.</td>
+	</tr>
+</table>
+<h2><a href="#TileLayer">TileLayer </a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#Layer.tilelayer:getGridBounds">Layer.tilelayer:getGridBounds ()</a></td>
+	<td class="summary">Gets the bounds of the layer (in tiles).</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.tilelayer:getPixelBounds">Layer.tilelayer:getPixelBounds ()</a></td>
+	<td class="summary">Gets the bounds of the layer (in pixels).</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.tilelayer:getTileAtGridPosition">Layer.tilelayer:getTileAtGridPosition (x, y)</a></td>
+	<td class="summary">Gets the tile at the given grid position.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.tilelayer:setTileAtGridPosition">Layer.tilelayer:setTileAtGridPosition (x, y, gid)</a></td>
+	<td class="summary">Sets the tile at the given grid position.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.tilelayer:getTileAtPixelPosition">Layer.tilelayer:getTileAtPixelPosition (x, y)</a></td>
+	<td class="summary">Gets the tile at the given pixel position.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.tilelayer:setTileAtPixelPosition">Layer.tilelayer:setTileAtPixelPosition (x, y, gid)</a></td>
+	<td class="summary">Sets the tile at the given pixel position.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.tilelayer:getTiles">Layer.tilelayer:getTiles ()</a></td>
+	<td class="summary">Returns an iterator over all the tiles in this layer.</td>
+	</tr>
+</table>
+<h2><a href="#ImageLayer">ImageLayer </a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#Layer.imagelayer:draw">Layer.imagelayer:draw ()</a></td>
+	<td class="summary">Draws the layer.</td>
+	</tr>
+</table>
+<h2><a href="#Group">Group </a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#Layer.group:getLayer">Layer.group:getLayer (...)</a></td>
+	<td class="summary">Gets a child layer by name.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.group:update">Layer.group:update (dt)</a></td>
+	<td class="summary">Updates animations in all child layers.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Layer.group:draw">Layer.group:draw ()</a></td>
+	<td class="summary">Draws the layer.</td>
+	</tr>
+</table>
+<h2><a href="#Map">Map </a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#Map:getTileset">Map:getTileset (gid)</a></td>
+	<td class="summary">Gets the tileset that has the tile with the given global ID.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Map:getTile">Map:getTile (gid)</a></td>
+	<td class="summary">Gets a tile with the given global ID.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Map:getTileType">Map:getTileType (gid)</a></td>
+	<td class="summary">Gets the type of a tile.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Map:getTileProperty">Map:getTileProperty (gid, propertyName)</a></td>
+	<td class="summary">Gets the value of a property of a tile.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Map:setTileProperty">Map:setTileProperty (gid, propertyName, propertyValue)</a></td>
+	<td class="summary">Sets the value of a tile property.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Map:getLayer">Map:getLayer (...)</a></td>
+	<td class="summary">Gets a layer by name.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Map:update">Map:update (dt)</a></td>
+	<td class="summary">Updates all animations in the map.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Map:drawBackground">Map:drawBackground ()</a></td>
+	<td class="summary">Draws the solid color background of the map.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#Map:draw">Map:draw ()</a></td>
+	<td class="summary">Draws the map.</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "load"></a>
+    <strong>load (path)</strong>
+    </dt>
+    <dd>
+    Loads a Tiled map from an exported Lua file.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">path</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+         the path to the Lua file
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the loaded <a href="index.html#Map">Map</a>
+    </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header has-description"><a name="Layer"></a>Layer </h2>
+
+          <div class="section-description">
+          The base class for all layers.
+          </div>
+    <dl class="function">
+    <dt>
+    <a name = "Layer.base:gridToPixel"></a>
+    <strong>Layer.base:gridToPixel (x, y)</strong>
+    </dt>
+    <dd>
+    Converts grid coordinates to pixel coordinates for this layer.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">x</span>
+            <span class="types"><span class="type">number</span></span>
+         the column to get the pixel coordinates of
+        </li>
+        <li><span class="parameter">y</span>
+            <span class="types"><span class="type">number</span></span>
+         the row to get the pixel coordinates of
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+        the horizontal position of the grid cell in pixels</li>
+        <li>
+        the vertical position of the grid cell in pixels</li>
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.base:pixelToGrid"></a>
+    <strong>Layer.base:pixelToGrid (x, y)</strong>
+    </dt>
+    <dd>
+    Converts pixel coordinates for this layer to grid coordinates.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">x</span>
+            <span class="types"><span class="type">number</span></span>
+         the horizontal position to get the grid cell at
+        </li>
+        <li><span class="parameter">y</span>
+            <span class="types"><span class="type">number</span></span>
+         the vertical position to get the grid cell at
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+        the column of the grid cell</li>
+        <li>
+        the row of the grid cell</li>
+    </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header has-description"><a name="SpriteLayer"></a>SpriteLayer </h2>
+
+          <div class="section-description">
+          Parent class for tile layers and object layers.
+          </div>
+    <dl class="function">
+    <dt>
+    <a name = "Layer.spritelayer:update"></a>
+    <strong>Layer.spritelayer:update (dt)</strong>
+    </dt>
+    <dd>
+    Updates animations on the layer.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">dt</span>
+            <span class="types"><span class="type">number</span></span>
+         the time elapsed since the last frame (in seconds)
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.spritelayer:draw"></a>
+    <strong>Layer.spritelayer:draw ()</strong>
+    </dt>
+    <dd>
+    Draws the layer.
+
+
+
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header has-description"><a name="TileLayer"></a>TileLayer </h2>
+
+          <div class="section-description">
+          A layer that contains tiles placed on a grid. </p>
+
+<p> Inherits from <a href="index.html#SpriteLayer">SpriteLayer</a>.
+          </div>
+    <dl class="function">
+    <dt>
+    <a name = "Layer.tilelayer:getGridBounds"></a>
+    <strong>Layer.tilelayer:getGridBounds ()</strong>
+    </dt>
+    <dd>
+    Gets the bounds of the layer (in tiles).
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+        the left bound of the layer</li>
+        <li>
+        the top bound of the layer</li>
+        <li>
+        the right bound of the layer</li>
+        <li>
+        the bottom bound of the layer</li>
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.tilelayer:getPixelBounds"></a>
+    <strong>Layer.tilelayer:getPixelBounds ()</strong>
+    </dt>
+    <dd>
+    Gets the bounds of the layer (in pixels).
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+        the left bound of the layer</li>
+        <li>
+        the top bound of the layer</li>
+        <li>
+        the right bound of the layer</li>
+        <li>
+        the bottom bound of the layer</li>
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.tilelayer:getTileAtGridPosition"></a>
+    <strong>Layer.tilelayer:getTileAtGridPosition (x, y)</strong>
+    </dt>
+    <dd>
+    Gets the tile at the given grid position.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">x</span>
+            <span class="types"><span class="type">number</span></span>
+         the column to get the tile at
+        </li>
+        <li><span class="parameter">y</span>
+            <span class="types"><span class="type">number</span></span>
+         the row to get the tile at
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the global ID of the tile at the given grid position,
+ or false if the tile is empty
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.tilelayer:setTileAtGridPosition"></a>
+    <strong>Layer.tilelayer:setTileAtGridPosition (x, y, gid)</strong>
+    </dt>
+    <dd>
+    Sets the tile at the given grid position.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">x</span>
+            <span class="types"><span class="type">number</span></span>
+         the column to set the tile at
+        </li>
+        <li><span class="parameter">y</span>
+            <span class="types"><span class="type">number</span></span>
+         the row to set the tile at
+        </li>
+        <li><span class="parameter">gid</span>
+            <span class="types"><span class="type">number</span></span>
+         the global ID to set the tile to
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.tilelayer:getTileAtPixelPosition"></a>
+    <strong>Layer.tilelayer:getTileAtPixelPosition (x, y)</strong>
+    </dt>
+    <dd>
+    Gets the tile at the given pixel position.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">x</span>
+            <span class="types"><span class="type">number</span></span>
+         the horizontal position to get the tile at
+        </li>
+        <li><span class="parameter">y</span>
+            <span class="types"><span class="type">number</span></span>
+         the vertical position to get the tile at
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the global ID of the tile at the given pixel position,
+ or false if the tile is empty
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.tilelayer:setTileAtPixelPosition"></a>
+    <strong>Layer.tilelayer:setTileAtPixelPosition (x, y, gid)</strong>
+    </dt>
+    <dd>
+    Sets the tile at the given pixel position.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">x</span>
+            <span class="types"><span class="type">number</span></span>
+         the horizontal position to set the tile at
+        </li>
+        <li><span class="parameter">y</span>
+            <span class="types"><span class="type">number</span></span>
+         the vertical position to set the tile at
+        </li>
+        <li><span class="parameter">gid</span>
+            <span class="types"><span class="type">number</span></span>
+         the global ID to set the tile to
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.tilelayer:getTiles"></a>
+    <strong>Layer.tilelayer:getTiles ()</strong>
+    </dt>
+    <dd>
+    Returns an iterator over all the tiles in this layer.
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+
+<p> an iterator that returns that following values:</p>
+
+<ul>
+    <li>the index of the tile</li>
+    <li>the global ID of the tile</li>
+    <li>the x position of the tile (in grid cells)</li>
+    <li>the y position of the tile (in grid cells)</li>
+    <li>the x position of the tile (in pixels)</li>
+    <li>the y position of the tile (in pixels)</li>
+</ul>
+
+
+    </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header has-description"><a name="ImageLayer"></a>ImageLayer </h2>
+
+          <div class="section-description">
+          A layer that displays a single image.
+          </div>
+    <dl class="function">
+    <dt>
+    <a name = "Layer.imagelayer:draw"></a>
+    <strong>Layer.imagelayer:draw ()</strong>
+    </dt>
+    <dd>
+    Draws the layer.
+
+
+
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header has-description"><a name="Group"></a>Group </h2>
+
+          <div class="section-description">
+          A layer that contains other layers.
+          </div>
+    <dl class="function">
+    <dt>
+    <a name = "Layer.group:getLayer"></a>
+    <strong>Layer.group:getLayer (...)</strong>
+    </dt>
+    <dd>
+    Gets a child layer by name. </p>
+
+<p> Can get nested layers.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">...</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+         the name(s) of the layers to get
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the <a href="index.html#Layer">Layer</a>, if it exists
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.group:update"></a>
+    <strong>Layer.group:update (dt)</strong>
+    </dt>
+    <dd>
+    Updates animations in all child layers.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">dt</span>
+            <span class="types"><span class="type">number</span></span>
+         the elapsed time since the last frame (in seconds)
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Layer.group:draw"></a>
+    <strong>Layer.group:draw ()</strong>
+    </dt>
+    <dd>
+    Draws the layer.
+
+
+
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header has-description"><a name="Map"></a>Map </h2>
+
+          <div class="section-description">
+          A tiled map.
+          </div>
+    <dl class="function">
+    <dt>
+    <a name = "Map:getTileset"></a>
+    <strong>Map:getTileset (gid)</strong>
+    </dt>
+    <dd>
+    Gets the tileset that has the tile with the given global ID.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">gid</span>
+            <span class="types"><span class="type">number</span></span>
+         the global ID of the tile
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the tileset that contains the tile, if it exists
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Map:getTile"></a>
+    <strong>Map:getTile (gid)</strong>
+    </dt>
+    <dd>
+    Gets a tile with the given global ID.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">gid</span>
+            <span class="types"><span class="type">number</span></span>
+         the global ID of the tile
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the data table for the tile with the given global ID, if it exists
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Map:getTileType"></a>
+    <strong>Map:getTileType (gid)</strong>
+    </dt>
+    <dd>
+    Gets the type of a tile.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">gid</span>
+            <span class="types"><span class="type">number</span></span>
+         the global ID of the tile
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the type of the tile with the given global ID, if it exists
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Map:getTileProperty"></a>
+    <strong>Map:getTileProperty (gid, propertyName)</strong>
+    </dt>
+    <dd>
+    Gets the value of a property of a tile.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">gid</span>
+            <span class="types"><span class="type">number</span></span>
+         the global ID of the tile
+        </li>
+        <li><span class="parameter">propertyName</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+         the name of the property
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the value of the property, if it exists
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Map:setTileProperty"></a>
+    <strong>Map:setTileProperty (gid, propertyName, propertyValue)</strong>
+    </dt>
+    <dd>
+    Sets the value of a tile property.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">gid</span>
+            <span class="types"><span class="type">number</span></span>
+         the global ID of the tile
+        </li>
+        <li><span class="parameter">propertyName</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+         the name of the property
+        </li>
+        <li><span class="parameter">propertyValue</span>
+         the value to set the property to
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Map:getLayer"></a>
+    <strong>Map:getLayer (...)</strong>
+    </dt>
+    <dd>
+    Gets a layer by name. </p>
+
+<p> Can get nested layers.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">...</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+         the name(s) of the layers to get
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the <a href="index.html#Layer">Layer</a>, if it exists
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Map:update"></a>
+    <strong>Map:update (dt)</strong>
+    </dt>
+    <dd>
+    Updates all animations in the map.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">dt</span>
+            <span class="types"><span class="type">number</span></span>
+         the elapsed time since the last frame
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Map:drawBackground"></a>
+    <strong>Map:drawBackground ()</strong>
+    </dt>
+    <dd>
+    Draws the solid color background of the map.
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "Map:draw"></a>
+    <strong>Map:draw ()</strong>
+    </dt>
+    <dd>
+    Draws the map.
+
+
+
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2020-04-24 01:38:44 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>
