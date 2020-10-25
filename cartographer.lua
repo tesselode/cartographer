@@ -788,11 +788,10 @@ function Map:_getTileQuad(gid, frame)
 		id = tile.animation[frame].tileid
 	end
 	local image = self._images[tileset.image]
-	local gridWidth = math.floor(image:getWidth() / (tileset.tilewidth + tileset.spacing))
-	local x, y = indexToCoordinates(id + 1, gridWidth)
+	local x, y = indexToCoordinates(id + 1, tileset.columns)
 	return love.graphics.newQuad(
-		x * (tileset.tilewidth + tileset.spacing),
-		y * (tileset.tileheight + tileset.spacing),
+		tileset.margin + (x * (tileset.tilewidth + tileset.spacing)),
+		tileset.margin + (y * (tileset.tileheight + tileset.spacing)),
 		tileset.tilewidth, tileset.tileheight,
 		image:getWidth(), image:getHeight()
 	)
