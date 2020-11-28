@@ -351,7 +351,9 @@ end
 	the x/y/tileGid fields as indicators that a sprite exists.
 ]]
 
-function Layer.spritelayer:_addSprite(gid, x, y)
+function Layer.spritelayer:_addSprite(gid, x, y, scaleX, scaleY)
+	scaleX = scaleX or 1
+	scaleY = scaleY or 1
 	local spriteBatch = false
 	local id = false
 	local tileset = self._map:getTileset(gid)
@@ -361,12 +363,14 @@ function Layer.spritelayer:_addSprite(gid, x, y)
 		spriteBatch = self._spriteBatches[tileset]
 		local animation = self._animations[gid]
 		local quad = self._map:_getTileQuad(gid, animation and animation.currentFrame)
-		id = spriteBatch:add(quad, x, y)
+		id = spriteBatch:add(quad, x, y, 0, scaleX, scaleY)
 	end
 	table.insert(self._sprites.exists, true)
 	table.insert(self._sprites.tileGid, gid)
 	table.insert(self._sprites.x, x)
 	table.insert(self._sprites.y, y)
+	table.insert(self._sprites.scaleX, scaleX)
+	table.insert(self._sprites.scaleY, scaleY)
 	table.insert(self._sprites.spriteBatch, spriteBatch)
 	table.insert(self._sprites.id, id)
 	return #self._sprites.exists
@@ -380,6 +384,8 @@ function Layer.spritelayer:_removeSprite(index)
 	table.remove(self._sprites.tileGid, index)
 	table.remove(self._sprites.x, index)
 	table.remove(self._sprites.y, index)
+	table.remove(self._sprites.scaleX, index)
+	table.remove(self._sprites.scaleY, index)
 	table.remove(self._sprites.spriteBatch, index)
 	table.remove(self._sprites.id, index)
 end
@@ -393,6 +399,8 @@ function Layer.spritelayer:_init(map)
 		tileGid = {},
 		x = {},
 		y = {},
+		scaleX = {},
+		scaleY = {},
 		spriteBatch = {},
 		id = {},
 	}
@@ -416,7 +424,15 @@ function Layer.spritelayer:_updateAnimations(dt)
 				local quad = self._map:_getTileQuad(gid, animation.currentFrame)
 				for i = 1, #self._sprites.exists do
 					if self._sprites.tileGid[i] == gid then
-						self._sprites.spriteBatch[i]:set(self._sprites.id[i], quad, self._sprites.x[i], self._sprites.y[i])
+						self._sprites.spriteBatch[i]:set(
+							self._sprites.id[i],
+							quad,
+							self._sprites.x[i],
+							self._sprites.y[i],
+							0,
+							self._sprites.scaleX[i],
+							self._sprites.scaleY[i]
+						)
 					end
 				end
 			end
@@ -444,7 +460,14 @@ function Layer.spritelayer:draw()
 		if not self._sprites.spriteBatch[i] then
 			local animation = self._animations[self._sprites.tileGid[i]]
 			local image = self._map:_getTileImage(self._sprites.tileGid[i], animation and animation.currentFrame)
-			love.graphics.draw(image, self._sprites.x[i], self._sprites.y[i])
+			love.graphics.draw(
+				image,
+				self._sprites.x[i],
+				self._sprites.y[i],
+				0,
+				self._sprites.scaleX[i],
+				self._sprites.scaleY[i]
+			)
 		end
 	end
 	love.graphics.pop()
@@ -662,7 +685,14 @@ function Layer.objectgroup:_init(map)
 	Layer.spritelayer._init(self, map)
 	for _, object in ipairs(self.objects) do
 		if object.gid and object.visible then
-			self:_addSprite(object.gid, object.x, object.y - object.height)
+			local tileWidth, tileHeight = self._map:_getTileSize(object.gid)
+			self:_addSprite(
+				object.gid,
+				object.x,
+				object.y - object.height,
+				object.width / tileWidth,
+				object.height / tileHeight
+			)
 		end
 	end
 end
@@ -793,6 +823,18 @@ function Map:_getTileImage(gid, frame)
 		tile = self:getTile(tileset.firstgid + tile.animation[frame].tileid)
 	end
 	return self._images[tile.image]
+end
+
+-- Gets the size of the tile with the given global ID.
+-- Works for both single-image and image collection tilesets.
+function Map:_getTileSize(gid, frame)
+	local quad = self:_getTileQuad(gid, frame)
+	if quad then
+		local _, _, width, height = quad:getViewport()
+		return width, height
+	end
+	local image = self:_getTileImage(gid, frame)
+	return image:getDimensions()
 end
 
 --- Gets the tileset that has the tile with the given global ID.
